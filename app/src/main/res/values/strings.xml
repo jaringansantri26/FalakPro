@@ -1,0 +1,32 @@
+<resources>
+    <string name="app_name">FalakPro</string>
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_appearance">Tampilan &amp; Bahasa</string>
+    <string name="settings_theme">Tema Aplikasi</string>
+    <string name="settings_theme_desc">Pilih tema terang, gelap, atau mengikuti sistem</string>
+    <string name="settings_language">Bahasa</string>
+    <string name="settings_language_desc">Pilih bahasa antarmuka aplikasi</string>
+    <string name="settings_time_format">Format Waktu 24 Jam</string>
+    <string name="settings_time_format_desc">Tampilkan waktu dalam format 24 jam</string>
+    
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_dark">Gelap</string>
+    
+    <string name="lang_system">Mengikuti Sistem</string>
+    <string name="lang_id">Bahasa Indonesia</string>
+    <string name="lang_en">Bahasa Inggris (English)</string>
+    <string name="lang_ar">Bahasa Arab (العربية)</string>
+    
+    <string name="menu_awal_bulan">Awal Bulan</string>
+    <string name="menu_gerhana">Gerhana</string>
+    <string name="menu_jadwal_shalat">Jadwal Shalat</string>
+    <string name="menu_kalender">Kalender</string>
+    <string name="menu_kiblat">Arah Kiblat</string>
+    <string name="menu_data_falak">Data Falak</string>
+    <string name="menu_kalkulator">Kalkulator</string>
+    <string name="menu_pengaturan">Pengaturan</string>
+    <string name="menu_beranda">Beranda</string>
+    <string name="update_location">(Update)</string>
+    <string name="searching_location">Mencari Lokasi...</string>
+</resources>

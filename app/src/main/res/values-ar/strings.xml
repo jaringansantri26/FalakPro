@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">FalakPro</string>
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_appearance">المظهر واللغة</string>
+    <string name="settings_theme">مظهر التطبيق</string>
+    <string name="settings_theme_desc">اختر المظهر الفاتح أو الداكن أو حسب النظام</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_desc">اختر لغة واجهة التطبيق</string>
+    <string name="settings_time_format">تنسيق 24 ساعة</string>
+    <string name="settings_time_format_desc">عرض الوقت بتنسيق 24 ساعة</string>
+    
+    <string name="theme_system">النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    
+    <string name="lang_system">لغة النظام</string>
+    <string name="lang_id">الإندونيسية (Bahasa Indonesia)</string>
+    <string name="lang_en">الإنجليزية (English)</string>
+    <string name="lang_ar">Bahasa Arab (العربية)</string>
+    
+    <string name="menu_awal_bulan">بداية الشهر</string>
+    <string name="menu_gerhana">الكسوف والخسوف</string>
+    <string name="menu_jadwal_shalat">أوقات الصلاة</string>
+    <string name="menu_kalender">التقويم</string>
+    <string name="menu_kiblat">اتجاه القبلة</string>
+    <string name="menu_data_falak">بيانات الفلك</string>
+    <string name="menu_pengaturan">الإعدادات</string>
+    <string name="menu_beranda">الرئيسية</string>
+    <string name="update_location">(تحديث)</string>
+    <string name="searching_location">جاري البحث عن الموقع...</string>
+</resources>

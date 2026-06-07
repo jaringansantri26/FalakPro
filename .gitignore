@@ -1,0 +1,23 @@
+# Gradle / Android build output
+.gradle/
+build/
+*/build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+.kotlin/
+
+# VS Code
+.vscode/
+
+# Local machine files
+local.properties
+
+# Generated packages / archives
+*.apk
+*.aab
+*.zip
+
+# Logs
+*.log

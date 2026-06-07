@@ -1,57 +1,53 @@
-FalakPro
-            Islamic Astronomy & Calendar Application
-            Developed by Lembaga Falakiyah PWNU Jawa Barat
+TENTANG FALAKPRO
+FalakPro adalah aplikasi astronomi Islam dan ilmu falak yang dikembangkan oleh Lembaga Falakiyah PWNU Jawa Barat sebagai platform terpadu untuk kebutuhan hisab, rukyat, kalender, arah kiblat, jadwal salat, gerhana, dan data astronomi profesional.
 
-            TENTANG FALAKPRO
-            FalakPro adalah aplikasi astronomi Islam dan ilmu falak yang dikembangkan oleh Lembaga Falakiyah PWNU Jawa Barat sebagai platform terpadu untuk kebutuhan hisab, rukyat, kalender, arah kiblat, jadwal salat, gerhana, dan data astronomi profesional.
-            
-            Aplikasi ini dirancang untuk kalangan pesantren, akademisi, lembaga keagamaan, masjid, guru, mahasiswa, peneliti, dan masyarakat umum yang membutuhkan data astronomi dan falak dengan tingkat akurasi tinggi.
-            
-            FalakPro menggabungkan metode astronomi modern dan metode hisab turats (klasik) sehingga pengguna dapat membandingkan hasil perhitungan dari berbagai pendekatan keilmuan dalam satu aplikasi.
+Aplikasi ini dirancang untuk kalangan pesantren, akademisi, lembaga keagamaan, masjid, guru, mahasiswa, peneliti, dan masyarakat umum yang membutuhkan data astronomi dan falak dengan tingkat akurasi tinggi.
 
-            FITUR UTAMA
-            🗓️ Kalender Terpadu
-            • Kalender Masehi, Hijriyah, Saka Jawa, Caka Sunda
-            • Hari Pasaran Jawa, Pancawara Caka Sunda, Wuku Sunda
-            
-            🕌 Jadwal Salat & 🌙 Imsakiyah Bulanan
-            • Subuh, Syuruq, Dhuha, Zuhur, Asar, Magrib, Isya
-            • Koreksi elevasi, zona waktu, GPS otomatis
-            • Cetak PDF format A4 siap cetak
+FalakPro menggabungkan metode astronomi modern dan metode hisab turats (klasik) sehingga pengguna dapat membandingkan hasil perhitungan dari berbagai pendekatan keilmuan dalam satu aplikasi.
 
-            🧭 Kompas Kiblat & 📷 Kamera Kiblat (AR)
-            • Azimut kiblat, kompas digital akurasi tinggi
-            • Penentuan arah dengan Augmented Reality (AR)
+FITUR UTAMA
+🗓️ Kalender Terpadu
+• Kalender Masehi, Hijriyah, Saka Jawa, Caka Sunda
+• Hari Pasaran Jawa, Pancawara Caka Sunda, Wuku Sunda
 
-            🌙 Hisab Awal Bulan Hijriyah
-            • Ijtimak, Tinggi Hilal, Elongasi, Umur Hilal, Fraksi iluminasi, Lag Time, dll.
+🕌 Jadwal Salat & 🌙 Imsakiyah Bulanan
+• Subuh, Syuruq, Dhuha, Zuhur, Asar, Magrib, Isya
+• Koreksi elevasi, zona waktu, GPS otomatis
+• Cetak PDF format A4 siap cetak
 
-            ☀️🌕 Gerhana Matahari & Bulan
-            • Prediksi gerhana sebagian, cincin, total, hibrida.
+🧭 Kompas Kiblat & 📷 Kamera Kiblat (AR)
+• Azimut kiblat, kompas digital akurasi tinggi
+• Penentuan arah dengan Augmented Reality (AR)
 
-            📖 Tabel Ephemeris & ⚓ Almanak Nautika
-            • Data harian dan bulanan Matahari & Bulan (RA, Deklinasi, Jarak, GHA, SHA, dll).
+🌙 Hisab Awal Bulan Hijriyah
+• Ijtimak, Tinggi Hilal, Elongasi, Umur Hilal, Fraksi iluminasi, Lag Time, dll.
 
-            ☀️🕋 Rasydul Qiblat Harian & Global
-            • Waktu bayangan Matahari menunjukkan arah kiblat (termasuk 27-28 Mei & 15-16 Juli).
+☀️🌕 Gerhana Matahari & Bulan
+• Prediksi gerhana sebagian, cincin, total, hibrida.
 
-            METODE PERHITUNGAN AWAL BULAN HIJRIYAH
-            Metode 1: Astronomi Modern (VSOP87D + ELPMPP02)
-            Menggunakan algoritma modern presisi tinggi untuk menghitung parameter hilal. Referensi: Bretagnon & Francou (VSOP87), Chapront-Touzé & Chapront (ELPMPP02), Jean Meeus.
+📖 Tabel Ephemeris & ⚓ Almanak Nautika
+• Data harian dan bulanan Matahari & Bulan (RA, Deklinasi, Jarak, GHA, SHA, dll).
 
-            Metode 2: Hisab Kitab Ad-Durr al-Aniq
-            Berdasarkan kitab karya KH. Ahmad Ghozali Muhammad Fathullah. Metode hisab tahqiq yang digunakan luas di lingkungan pesantren dan Nahdlatul Ulama dengan ketelitian tinggi.
+☀️🕋 Rasydul Qiblat Harian & Global
+• Waktu bayangan Matahari menunjukkan arah kiblat (termasuk 27-28 Mei & 15-16 Juli).
 
-            PENGEMBANG
-            Lembaga Falakiyah PWNU Jawa Barat
-            Lembaga resmi Nahdlatul Ulama bidang Hisab Rukyat, Kalender Hijriyah, Arah Kiblat, dan Edukasi Astronomi Islam.
+METODE PERHITUNGAN AWAL BULAN HIJRIYAH
+Metode 1: Astronomi Modern (VSOP87D + ELPMPP02)
+Menggunakan algoritma modern presisi tinggi untuk menghitung parameter hilal. Referensi: Bretagnon & Francou (VSOP87), Chapront-Touzé & Chapront (ELPMPP02), Jean Meeus.
 
-            Programmer:
-            Asep Jalaludin Bakrie
-            Lead Developer & System Architect
-            📞 0817-2238-56
+Metode 2: Hisab Kitab Ad-Durr al-Aniq
+Berdasarkan kitab karya KH. Ahmad Ghozali Muhammad Fathullah. Metode hisab tahqiq yang digunakan luas di lingkungan pesantren dan Nahdlatul Ulama dengan ketelitian tinggi.
 
-            © 2026 FalakPro
-            Developed by Lembaga Falakiyah PWNU Jawa Barat
-            Lead Developer: Asep Jalaludin Bakrie
-            All Rights Reserved 🌙🕌☀️📅🧭🔭⚓
+PENGEMBANG
+Lembaga Falakiyah PWNU Jawa Barat
+Lembaga resmi Nahdlatul Ulama bidang Hisab Rukyat, Kalender Hijriyah, Arah Kiblat, dan Edukasi Astronomi Islam.
+
+Programmer:
+Asep Jalaludin Bakrie
+Lead Developer & System Architect
+📞 0817-2238-56
+
+© 2026 FalakPro
+Developed by Lembaga Falakiyah PWNU Jawa Barat
+Lead Developer: Asep Jalaludin Bakrie
+All Rights Reserved 🌙🕌☀️📅🧭🔭⚓

@@ -1,14 +1,13 @@
 package com.falak.falakpro
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import androidx.core.content.pm.PackageInfoCompat
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.UpdateAvailability
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import kotlin.coroutines.resume
 
 data class AppUpdateInfo(
     val versionCode: Long,
@@ -23,25 +22,38 @@ data class AppUpdateInfo(
 }
 
 object AppUpdateChecker {
-    private const val PRIMARY_UPDATE_URL = "https://jaringansantri26.github.io/FalakPro/update.json"
-    private const val FALLBACK_UPDATE_URL = "https://raw.githubusercontent.com/jaringansantri26/FalakPro/main/update.json"
-    private const val CONNECT_TIMEOUT_MS = 7000
-    private const val READ_TIMEOUT_MS = 7000
 
     suspend fun check(context: Context): AppUpdateInfo? = withContext(Dispatchers.IO) {
-        if (!context.hasInternetConnection()) return@withContext null
+        suspendCancellableCoroutine { continuation ->
+            try {
+                val appUpdateManager = AppUpdateManagerFactory.create(context)
+                val appUpdateInfoTask = appUpdateManager.appUpdateInfo
 
-        val json = runCatching { fetchJson(PRIMARY_UPDATE_URL) }
-            .getOrElse { runCatching { fetchJson(FALLBACK_UPDATE_URL) }.getOrNull() }
-            ?: return@withContext null
+                appUpdateInfoTask.addOnSuccessListener { info ->
+                    if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                        val availableVersionCode = info.availableVersionCode().toLong()
+                        val defaultPlayStoreUrl = "https://play.google.com/store/apps/details?id=${context.packageName}"
 
-        val updateInfo = parseUpdateInfo(json)
-        val localVersionCode = context.currentVersionCode()
-
-        if (updateInfo.versionCode > localVersionCode) {
-            updateInfo
-        } else {
-            null
+                        val updateInfo = AppUpdateInfo(
+                            versionCode = availableVersionCode,
+                            versionName = "Versi Baru",
+                            apkUrl = defaultPlayStoreUrl,
+                            releasePage = defaultPlayStoreUrl,
+                            changelog = "Pembaruan fitur & peningkatan stabilitas aplikasi FalakPro sudah resmi tersedia di Google Play Store.",
+                            forceUpdate = false
+                        )
+                        if (continuation.isActive) continuation.resume(updateInfo)
+                    } else {
+                        if (continuation.isActive) continuation.resume(null)
+                    }
+                }.addOnFailureListener { e ->
+                    android.util.Log.e("AppUpdateChecker", "Google Play Update check failed: ${e.message}")
+                    if (continuation.isActive) continuation.resume(null)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AppUpdateChecker", "Google Play Update check exception: ${e.message}")
+                if (continuation.isActive) continuation.resume(null)
+            }
         }
     }
 
@@ -66,34 +78,6 @@ object AppUpdateChecker {
         }
     }
 
-    private fun fetchJson(url: String): JSONObject {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            useCaches = false
-        }
-
-        return connection.use {
-            if (responseCode !in 200..299) {
-                throw IllegalStateException("Update check failed: HTTP $responseCode")
-            }
-            JSONObject(inputStream.bufferedReader().use { reader -> reader.readText() })
-        }
-    }
-
-    private fun parseUpdateInfo(json: JSONObject): AppUpdateInfo {
-        val defaultPlayStoreUrl = "https://play.google.com/store/apps/details?id=com.falak.falakpro"
-        return AppUpdateInfo(
-            versionCode = json.optLong("versionCode", 0L),
-            versionName = json.optString("versionName", "1.0.0"),
-            apkUrl = json.optString("apkUrl", defaultPlayStoreUrl),
-            releasePage = json.optString("releasePage", defaultPlayStoreUrl),
-            changelog = json.optString("changelog", "Versi terbaru FalakPro sudah tersedia di Google Play Store."),
-            forceUpdate = json.optBoolean("forceUpdate", false)
-        )
-    }
-
     fun Context.currentVersionCode(): Long {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         return PackageInfoCompat.getLongVersionCode(packageInfo)
@@ -102,21 +86,5 @@ object AppUpdateChecker {
     fun Context.currentVersionName(): String {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         return packageInfo.versionName ?: "1.0.0"
-    }
-
-    private fun Context.hasInternetConnection(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return false
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private inline fun <T : HttpURLConnection, R> T.use(block: T.() -> R): R {
-        return try {
-            block()
-        } finally {
-            disconnect()
-        }
     }
 }

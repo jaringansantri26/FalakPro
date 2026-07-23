@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.falak.falakpro"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.falak.falakpro"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 2
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -79,8 +79,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.play.services.location)
-    implementation(libs.play.app.update)
-    implementation(libs.play.app.update.ktx)
+    implementation("com.google.android.play:app-update:2.1.0")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

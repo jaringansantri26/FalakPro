@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kebijakan Privasi – FalakPro</title>
+  <style>
+    :root {
+      --green: #0B6B35;
+      --green-light: #e8f5ee;
+      --green-mid: #00897B;
+      --text: #1a1a1a;
+      --muted: #555;
+      --border: #d0e8da;
+      --bg: #f9fdf9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0B6B35 0%, #00897B 100%);
+      color: #fff;
+      text-align: center;
+      padding: 48px 24px 36px;
+    }
+    header .logo-circle {
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; letter-spacing: 1px; }
+    header p  { font-size: 0.95rem; opacity: .85; margin-top: 6px; }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.82rem;
+      margin-top: 12px;
+    }
+
+    /* ── Language Tabs ── */
+    .tab-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: #fff;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,.07);
+    }
+    .tab-bar button {
+      flex: 1; max-width: 200px;
+      padding: 14px 20px;
+      border: none; background: none;
+      font-size: 0.95rem; font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .2s;
+    }
+    .tab-bar button.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+      background: var(--green-light);
+    }
+    .tab-bar button:hover:not(.active) { background: #f0f0f0; }
+
+    /* ── Content ── */
+    .content { display: none; max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+    .content.active { display: block; }
+
+    /* Arabic RTL */
+    .content[data-lang="ar"] { direction: rtl; text-align: right; font-family: 'Segoe UI', 'Arial', Tahoma, sans-serif; }
+
+    h2 {
+      font-size: 1.5rem;
+      color: var(--green);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+      margin: 36px 0 16px;
+    }
+    h3 { font-size: 1.1rem; color: var(--green-mid); margin: 24px 0 10px; }
+    p  { margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    ul li { margin-bottom: 6px; }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    }
+    .card h3 { margin-top: 0; }
+
+    /* Info box */
+    .info-box {
+      background: var(--green-light);
+      border-left: 4px solid var(--green);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 0.93rem;
+    }
+    [data-lang="ar"] .info-box { border-left: none; border-right: 4px solid var(--green); border-radius: 8px 0 0 8px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
+    th { background: var(--green); color: #fff; padding: 10px 12px; text-align: left; }
+    [data-lang="ar"] th { text-align: right; }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    tr:nth-child(even) td { background: var(--green-light); }
+    .opt { color: var(--green-mid); font-weight: 600; font-size: 0.82rem; }
+
+    /* No-collect list */
+    .no-list { list-style: none; padding: 0; }
+    .no-list li::before { content: "✗ "; color: #c0392b; font-weight: bold; }
+
+    /* Footer */
+    footer {
+      background: var(--green);
+      color: #fff;
+      text-align: center;
+      padding: 28px 20px;
+      font-size: 0.88rem;
+      opacity: .92;
+    }
+    footer a { color: #a8e6c0; }
+
+    @media (max-width: 600px) {
+      header h1 { font-size: 1.4rem; }
+      .tab-bar button { font-size: 0.82rem; padding: 12px 8px; }
+      h2 { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-circle">🌙</div>
+  <h1>FalakPro</h1>
+  <p>Kebijakan Privasi · Privacy Policy · سياسة الخصوصية</p>
+  <span class="badge">Terakhir diperbarui / Last updated: 23 Juli 2026</span>
+</header>
+
+<!-- ════ TAB BAR ════ -->
+<div class="tab-bar">
+  <button class="active" onclick="switchTab('id')">🇮🇩 Bahasa Indonesia</button>
+  <button onclick="switchTab('en')">🇬🇧 English</button>
+  <button onclick="switchTab('ar')">🇸🇦 العربية</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     BAHASA INDONESIA
+     ══════════════════════════════════════════════ -->
+<div class="content active" data-lang="id">
+
+  <h2>1. Pendahuluan</h2>
+  <p>Selamat datang di <strong>FalakPro</strong>, aplikasi hisab falak (astronomi Islam) yang dikembangkan oleh <strong>Lembaga Falakiyah PWNU Jawa Barat</strong>. Kebijakan Privasi ini menjelaskan bagaimana kami menangani informasi Anda saat menggunakan aplikasi ini.</p>
+  <p>Dengan menggunakan FalakPro, Anda menyetujui kebijakan yang dijelaskan dalam dokumen ini.</p>
+
+  <h2>2. Data yang Kami Kumpulkan</h2>
+
+  <div class="card">
+    <h3>📍 2.1 Data Lokasi</h3>
+    <ul>
+      <li><strong>Apa:</strong> Koordinat GPS (lintang, bujur, ketinggian) dan nama wilayah.</li>
+      <li><strong>Kapan:</strong> Hanya saat Anda aktif menekan tombol <em>"Deteksi Lokasi Otomatis"</em>.</li>
+      <li><strong>Tujuan:</strong> Menghitung jadwal shalat, arah kiblat, dan data falak yang akurat.</li>
+      <li><strong>Penyimpanan:</strong> Disimpan <strong>lokal di perangkat</strong> (SharedPreferences). Tidak pernah dikirim ke server.</li>
+    </ul>
+    <div class="info-box">💡 Anda dapat menggunakan mode manual tanpa memberikan izin lokasi sama sekali.</div>
+  </div>
+
+  <div class="card">
+    <h3>📷 2.2 Kamera</h3>
+    <ul>
+      <li><strong>Apa:</strong> Pratinjau kamera secara langsung (live preview).</li>
+      <li><strong>Tujuan:</strong> Menampilkan arah kiblat dengan Augmented Reality (AR) di fitur Kamera Kiblat.</li>
+      <li><strong>Penyimpanan:</strong> Tidak ada gambar atau video yang direkam, disimpan, atau diunggah.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>⚙️ 2.3 Preferensi Pengguna</h3>
+    <ul>
+      <li><strong>Apa:</strong> Nama lokasi, koordinat manual, zona waktu, tema tampilan, metode hisab, dan pengaturan lainnya.</li>
+      <li><strong>Penyimpanan:</strong> Seluruhnya tersimpan <strong>lokal di perangkat</strong>. Tidak pernah dikirim ke server manapun.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔄 2.4 Pemeriksaan Pembaruan Aplikasi</h3>
+    <ul>
+      <li><strong>Yang dikirim:</strong> <em>Tidak ada data pribadi</em>. Aplikasi hanya mengecek ketersediaan rilis versi terbaru di Google Play Store.</li>
+      <li><strong>Tujuan:</strong> Memberitahu pengguna jika ada versi terbaru yang sudah tersedia di Google Play Store.</li>
+      <li><strong>Frekuensi:</strong> Sekali saat aplikasi dibuka, jika ada koneksi internet.</li>
+    </ul>
+  </div>
+
+  <h2>3. Data yang TIDAK Kami Kumpulkan</h2>
+  <div class="card">
+    <ul class="no-list">
+      <li>Nama, email, nomor telepon, atau identitas pribadi apapun</li>
+      <li>Riwayat penggunaan atau analitik perilaku pengguna</li>
+      <li>Pelacakan lokasi terus-menerus (background location tracking)</li>
+      <li>Foto, rekaman video, atau audio</li>
+      <li>Daftar kontak, SMS, atau data perangkat lainnya</li>
+      <li>Data iklan (advertising tracking / marketing)</li>
+      <li>Informasi keuangan atau pembayaran</li>
+    </ul>
+  </div>
+
+  <h2>4. Izin yang Diminta</h2>
+  <table>
+    <tr><th>Izin</th><th>Kegunaan</th><th>Status</th></tr>
+    <tr><td><code>ACCESS_FINE_LOCATION</code></td><td>GPS presisi tinggi untuk jadwal shalat & kiblat</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>ACCESS_COARSE_LOCATION</code></td><td>Lokasi perkiraan sebagai alternatif</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>CAMERA</code></td><td>Pratinjau AR untuk Kamera Kiblat</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>INTERNET</code></td><td>Memeriksa pembaruan resmi di Google Play Store</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>ACCESS_NETWORK_STATE</code></td><td>Memeriksa ketersediaan koneksi</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>ACCESS_WIFI_STATE</code></td><td>Memeriksa jenis koneksi jaringan</td><td class="opt">Opsional</td></tr>
+    <tr><td><code>VIBRATE</code></td><td>Notifikasi waktu shalat dengan getaran</td><td class="opt">Opsional</td></tr>
+  </table>
+  <div class="info-box">✅ Semua izin bersifat opsional. Fitur utama hisab falak dapat digunakan penuh dengan input koordinat manual tanpa GPS maupun Kamera.</div>
+
+  <h2>5. Layanan Pihak Ketiga</h2>
+  <div class="card">
+    <h3>Google Play Services (FusedLocationProvider)</h3>
+    <p>Digunakan untuk mendapatkan data GPS dari perangkat. Tunduk pada <a href="https://policies.google.com/privacy" target="_blank">Kebijakan Privasi Google</a>.</p>
+    <h3>Android Geocoder</h3>
+    <p>Mengubah koordinat GPS menjadi nama wilayah. Data koordinat dikirim ke server Google hanya saat fitur ini aktif.</p>
+    <h3>Google Play Store</h3>
+    <p>Distribusi dan pembaruan aplikasi dilakukan secara resmi melalui Google Play Store. Tunduk pada <a href="https://policies.google.com/privacy" target="_blank">Kebijakan Privasi Google</a>.</p>
+  </div>
+
+  <h2>6. Hak Pengguna</h2>
+  <div class="card">
+    <ul>
+      <li>🔍 <strong>Akses</strong> data: Lihat di menu Pengaturan aplikasi</li>
+      <li>✏️ <strong>Ubah</strong> data lokasi: Langsung di Pengaturan Lokasi</li>
+      <li>🗑️ <strong>Hapus</strong> semua data: Hapus data aplikasi atau uninstall FalakPro</li>
+      <li>🔒 <strong>Cabut izin</strong> kapan saja melalui Pengaturan Sistem Android</li>
+    </ul>
+  </div>
+
+  <h2>7. Kontak</h2>
+  <div class="card">
+    <p><strong>Lembaga Falakiyah PWNU Jawa Barat</strong><br>
+    Pengembang: Tim FalakPro<br>
+    Repositori: <a href="https://github.com/jaringansantri26/FalakPro" target="_blank">github.com/jaringansantri26/FalakPro</a><br>
+    Organisasi: Pengurus Wilayah Nahdlatul Ulama Jawa Barat</p>
+  </div>
+
+</div><!-- /id -->
+
+
+<!-- ══════════════════════════════════════════════
+     ENGLISH
+     ══════════════════════════════════════════════ -->
+<div class="content" data-lang="en">
+
+  <h2>1. Introduction</h2>
+  <p>Welcome to <strong>FalakPro</strong>, an Islamic astronomical calculation application developed by <strong>Lembaga Falakiyah PWNU Jawa Barat</strong> (Islamic Astronomical Board of West Java NU). This Privacy Policy explains how we handle your information when you use this application.</p>
+  <p>By using FalakPro, you agree to the practices described in this policy.</p>
+
+  <h2>2. Data We Collect</h2>
+
+  <div class="card">
+    <h3>📍 2.1 Location Data</h3>
+    <ul>
+      <li><strong>What:</strong> GPS coordinates (latitude, longitude, altitude) and a region name derived from those coordinates.</li>
+      <li><strong>When:</strong> Only when you actively press the <em>"Auto-Detect Location"</em> button.</li>
+      <li><strong>Purpose:</strong> To accurately calculate prayer times, Qibla direction, and astronomical data for your location.</li>
+      <li><strong>Storage:</strong> Stored <strong>locally on your device</strong> (SharedPreferences). Never transmitted to any server.</li>
+    </ul>
+    <div class="info-box">💡 You may use manual mode by entering coordinates yourself — no location permission required.</div>
+  </div>
+
+  <div class="card">
+    <h3>📷 2.2 Camera</h3>
+    <ul>
+      <li><strong>What:</strong> Live camera preview only.</li>
+      <li><strong>Purpose:</strong> To display Qibla direction using Augmented Reality (AR) in the Qibla Camera feature.</li>
+      <li><strong>Storage:</strong> No images or videos are recorded, saved, or uploaded at any time.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>⚙️ 2.3 User Preferences</h3>
+    <ul>
+      <li><strong>What:</strong> Location name, manual coordinates, timezone, display theme, prayer calculation method, and other settings.</li>
+      <li><strong>Storage:</strong> All stored <strong>locally on your device</strong>. Never sent to any server.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔄 2.4 App Update Check</h3>
+    <ul>
+      <li><strong>What is sent:</strong> <em>No personal data.</em> The app only checks for official version releases available on Google Play Store.</li>
+      <li><strong>Purpose:</strong> To notify users when a newer version is available on Google Play Store.</li>
+      <li><strong>Frequency:</strong> Once when the app opens, if internet is available.</li>
+    </ul>
+  </div>
+
+  <h2>3. Data We Do NOT Collect</h2>
+  <div class="card">
+    <ul class="no-list">
+      <li>Name, email, phone number, or any personal identity</li>
+      <li>Usage history or behavioral analytics</li>
+      <li>Continuous/background location tracking</li>
+      <li>Photos, video recordings, or audio</li>
+      <li>Contacts, SMS, or other device data</li>
+      <li>Advertising tracking or marketing data</li>
+      <li>Financial or payment information</li>
+    </ul>
+  </div>
+
+  <h2>4. Permissions Requested</h2>
+  <table>
+    <tr><th>Permission</th><th>Purpose</th><th>Status</th></tr>
+    <tr><td><code>ACCESS_FINE_LOCATION</code></td><td>High-precision GPS for prayer times & Qibla</td><td class="opt">Optional</td></tr>
+    <tr><td><code>ACCESS_COARSE_LOCATION</code></td><td>Approximate location as fallback</td><td class="opt">Optional</td></tr>
+    <tr><td><code>CAMERA</code></td><td>AR preview for Qibla Camera feature</td><td class="opt">Optional</td></tr>
+    <tr><td><code>INTERNET</code></td><td>Check official updates on Google Play Store</td><td class="opt">Optional</td></tr>
+    <tr><td><code>ACCESS_NETWORK_STATE</code></td><td>Check network availability before update check</td><td class="opt">Optional</td></tr>
+    <tr><td><code>ACCESS_WIFI_STATE</code></td><td>Check network connection type</td><td class="opt">Optional</td></tr>
+    <tr><td><code>VIBRATE</code></td><td>Prayer time notifications via vibration</td><td class="opt">Optional</td></tr>
+  </table>
+  <div class="info-box">✅ All permissions are optional. The full astronomical calculation features can be used with manual coordinate input — no GPS or Camera required.</div>
+
+  <h2>5. Third-Party Services</h2>
+  <div class="card">
+    <h3>Google Play Services (FusedLocationProvider)</h3>
+    <p>Used to obtain GPS location data from the device. Subject to <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a>.</p>
+    <h3>Android Geocoder</h3>
+    <p>Converts GPS coordinates into region names. Coordinate data is sent to Google servers only when this feature is actively used.</p>
+    <h3>Google Play Store</h3>
+    <p>Application distribution and updates are officially provided via Google Play Store. Subject to <a href="https://policies.google.com/privacy" target="_blank">Google's Privacy Policy</a>.</p>
+  </div>
+
+  <h2>6. Your Rights</h2>
+  <div class="card">
+    <ul>
+      <li>🔍 <strong>Access</strong> stored data: Available in the app's Settings menu</li>
+      <li>✏️ <strong>Modify</strong> location data: Directly in Location Settings</li>
+      <li>🗑️ <strong>Delete</strong> all data: Clear app data or uninstall FalakPro</li>
+      <li>🔒 <strong>Revoke permissions</strong> at any time via Android System Settings</li>
+    </ul>
+  </div>
+
+  <h2>7. Contact</h2>
+  <div class="card">
+    <p><strong>Lembaga Falakiyah PWNU Jawa Barat</strong><br>
+    Developer: FalakPro Team<br>
+    Repository: <a href="https://github.com/jaringansantri26/FalakPro" target="_blank">github.com/jaringansantri26/FalakPro</a><br>
+    Organization: Regional Executive Board of Nahdlatul Ulama, West Java</p>
+  </div>
+
+</div><!-- /en -->
+
+
+<!-- ══════════════════════════════════════════════
+     ARABIC
+     ══════════════════════════════════════════════ -->
+<div class="content" data-lang="ar">
+
+  <h2>١. مقدمة</h2>
+  <p>مرحباً بك في تطبيق <strong>FalakPro</strong>، تطبيق الحساب الفلكي الإسلامي الذي طوّرته <strong>هيئة الفلكية لمجلس نهضة العلماء الإقليمي بجاوة الغربية</strong>. توضح سياسة الخصوصية هذه كيفية تعاملنا مع معلوماتك عند استخدام هذا التطبيق.</p>
+  <p>باستخدامك تطبيق FalakPro، فإنك توافق على الممارسات الموضحة في هذه الوثيقة.</p>
+
+  <h2>٢. البيانات التي نجمعها</h2>
+
+  <div class="card">
+    <h3>📍 ٢.١ بيانات الموقع</h3>
+    <ul>
+      <li><strong>ما الذي نجمعه:</strong> إحداثيات GPS (خط العرض، خط الطول، الارتفاع) واسم المنطقة المستخرج منها.</li>
+      <li><strong>متى:</strong> فقط عندما تضغط بنشاط على زر <em>"تحديد الموقع تلقائياً"</em>.</li>
+      <li><strong>الغرض:</strong> لحساب مواقيت الصلاة واتجاه القبلة والبيانات الفلكية بدقة.</li>
+      <li><strong>التخزين:</strong> يُحفظ <strong>محلياً على جهازك</strong> (SharedPreferences). لا يُرسَل أبداً إلى أي خادم.</li>
+    </ul>
+    <div class="info-box">💡 يمكنك استخدام الوضع اليدوي بإدخال الإحداثيات بنفسك دون منح إذن الموقع.</div>
+  </div>
+
+  <div class="card">
+    <h3>📷 ٢.٢ الكاميرا</h3>
+    <ul>
+      <li><strong>ما الذي نجمعه:</strong> معاينة مباشرة للكاميرا فقط (live preview).</li>
+      <li><strong>الغرض:</strong> عرض اتجاه القبلة بتقنية الواقع المعزز (AR) في ميزة كاميرا القبلة.</li>
+      <li><strong>التخزين:</strong> لا تُسجَّل أي صور أو مقاطع فيديو ولا تُحفظ ولا تُرفع في أي وقت.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>⚙️ ٢.٣ تفضيلات المستخدم</h3>
+    <ul>
+      <li><strong>ما الذي يُحفظ:</strong> اسم الموقع، الإحداثيات اليدوية، المنطقة الزمنية، مظهر التطبيق، طريقة حساب الصلاة، وإعدادات أخرى.</li>
+      <li><strong>التخزين:</strong> كلها تُحفظ <strong>محلياً على جهازك</strong>. لا تُرسل إلى أي خادم.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>🔄 ٢.٤ فحص تحديثات التطبيق</h3>
+    <ul>
+      <li><strong>ما يُرسَل:</strong> <em>لا توجد بيانات شخصية.</em> يتحقق التطبيق فقط من توفر إصدار جديد رسمياً في متجر Google Play.</li>
+      <li><strong>الغرض:</strong> إخطار المستخدمين عند توفر إصدار جديد في متجر Google Play.</li>
+      <li><strong>التكرار:</strong> مرة واحدة عند فتح التطبيق، إذا كان الإنترنت متاحاً.</li>
+    </ul>
+  </div>
+
+  <h2>٣. البيانات التي لا نجمعها</h2>
+  <div class="card">
+    <ul class="no-list">
+      <li>الاسم أو البريد الإلكتروني أو رقم الهاتف أو أي هوية شخصية</li>
+      <li>سجل الاستخدام أو تحليلات السلوك</li>
+      <li>تتبع الموقع المستمر في الخلفية</li>
+      <li>الصور أو تسجيلات الفيديو أو الصوت</li>
+      <li>جهات الاتصال أو الرسائل القصيرة أو بيانات الجهاز الأخرى</li>
+      <li>بيانات الإعلانات أو التسويق</li>
+      <li>المعلومات المالية أو بيانات الدفع</li>
+    </ul>
+  </div>
+
+  <h2>٤. الأذونات المطلوبة</h2>
+  <table>
+    <tr><th>الإذن</th><th>الغرض</th><th>الحالة</th></tr>
+    <tr><td><code>ACCESS_FINE_LOCATION</code></td><td>GPS عالي الدقة لمواقيت الصلاة والقبلة</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>ACCESS_COARSE_LOCATION</code></td><td>موقع تقريبي كبديل</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>CAMERA</code></td><td>معاينة AR لميزة كاميرا القبلة</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>INTERNET</code></td><td>فحص التحديثات الرسمية في متجر Google Play</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>ACCESS_NETWORK_STATE</code></td><td>التحقق من توفر الاتصال قبل الفحص</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>ACCESS_WIFI_STATE</code></td><td>فحص نوع اتصال الشبكة</td><td class="opt">اختياري</td></tr>
+    <tr><td><code>VIBRATE</code></td><td>إشعارات مواقيت الصلاة بالاهتزاز</td><td class="opt">اختياري</td></tr>
+  </table>
+  <div class="info-box">✅ جميع الأذونات اختيارية. يمكن استخدام ميزات الحساب الفلكي الكاملة بإدخال الإحداثيات يدوياً دون الحاجة إلى GPS أو الكاميرا.</div>
+
+  <h2>٥. خدمات الطرف الثالث</h2>
+  <div class="card">
+    <h3>Google Play Services (FusedLocationProvider)</h3>
+    <p>تُستخدم للحصول على بيانات GPS من الجهاز. تخضع لـ <a href="https://policies.google.com/privacy" target="_blank">سياسة خصوصية Google</a>.</p>
+    <h3>Android Geocoder</h3>
+    <p>يحوّل إحداثيات GPS إلى أسماء مناطق. تُرسَل بيانات الإحداثيات إلى خوادم Google فقط عند تفعيل هذه الميزة.</p>
+    <h3>Google Play Store</h3>
+    <p>يتم توزيع التطبيق وتحديثه رسمياً عبر متجر Google Play. يخضع لـ <a href="https://policies.google.com/privacy" target="_blank">سياسة خصوصية Google</a>.</p>
+  </div>
+
+  <h2>٦. حقوق المستخدم</h2>
+  <div class="card">
+    <ul>
+      <li>🔍 <strong>الاطلاع</strong> على البيانات: متاح في قائمة الإعدادات</li>
+      <li>✏️ <strong>تعديل</strong> بيانات الموقع: مباشرة في إعدادات الموقع</li>
+      <li>🗑️ <strong>حذف</strong> جميع البيانات: امسح بيانات التطبيق أو أزل FalakPro</li>
+      <li>🔒 <strong>سحب الأذونات</strong> في أي وقت من إعدادات نظام Android</li>
+    </ul>
+  </div>
+
+  <h2>٧. التواصل</h2>
+  <div class="card">
+    <p><strong>هيئة الفلكية لمجلس نهضة العلماء الإقليمي بجاوة الغربية</strong><br>
+    المطوّر: فريق FalakPro<br>
+    المستودع: <a href="https://github.com/jaringansantri26/FalakPro" target="_blank">github.com/jaringansantri26/FalakPro</a><br>
+    المنظمة: المجلس الإقليمي لنهضة العلماء، جاوة الغربية، إندونيسيا</p>
+  </div>
+
+</div><!-- /ar -->
+
+<!-- ════ FOOTER ════ -->
+<footer>
+  <p>© 2025 FalakPro — Lembaga Falakiyah PWNU Jawa Barat</p>
+  <p style="margin-top:6px;opacity:.8;">Kebijakan ini berlaku untuk aplikasi FalakPro versi Android &nbsp;·&nbsp; This policy applies to the FalakPro Android application</p>
+</footer>
+
+<script>
+  function switchTab(lang) {
+    document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-bar button').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.content[data-lang="' + lang + '"]').classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

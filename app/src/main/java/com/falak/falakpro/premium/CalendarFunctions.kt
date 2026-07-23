@@ -13,6 +13,11 @@ import kotlin.math.*
  */
 object CalendarFunctions {
 
+    private const val INDONESIA_WEST_LAT = 5.89
+    private const val INDONESIA_WEST_LON = 95.32
+    private const val INDONESIA_WEST_ELEV = 0.0
+    private const val INDONESIA_WEST_TZ = 7.0
+
     // ─────────────────────────────────────────────────────────────────────────
     // A. KALENDER GREGORIAN / JULIAN
     // ─────────────────────────────────────────────────────────────────────────
@@ -656,35 +661,133 @@ object CalendarFunctions {
             val ghurubSunUt = HilalEngine.findSunsetNear(approxSunsetUt, lat, lon) ?: approxSunsetUt
             val ghurubJde = ghurubSunUt + DynamicalTimeEngine.deltaT(ghurubSunUt) / 86400.0
 
-            val isVisible = if (ijtimaJde >= ghurubJde) false
-            else HilalEngine.computeHilalVisibility(
-                ijtimaGeoJde = ijtimaJde,
-                lat = lat, lon = lon, elev = elev,
-                criteria = criteria,
-                evalSunsetUt = ghurubSunUt
-            )
+            var isVisible = false
+            val isKght = criteria == "KGHT Turki" || criteria == "Turki Global" || criteria == "KGHT Muhammadiyah"
+            
+            if (isKght) {
+                isVisible = HilalEngine.computeHilalVisibility(
+                    ijtimaGeoJde = ijtimaJde,
+                    lat = lat, lon = lon, elev = elev,
+                    criteria = criteria,
+                    evalSunsetUt = ghurubSunUt
+                )
+            } else {
+                if (ijtimaJde < ghurubJde) {
+                    // Cek titik LOKAL
+                    isVisible = HilalEngine.computeHilalVisibility(
+                        ijtimaGeoJde = ijtimaJde,
+                        lat = lat, lon = lon, elev = elev,
+                        criteria = criteria,
+                        evalSunsetUt = ghurubSunUt
+                    )
+                    
+                    // Cek titik SABANG (Wilayatul Hukmi) jika titik lokal belum terlihat
+                    if (!isVisible) {
+                        val sabangLat = 5.89
+                        val sabangLon = 95.32
+                        val ghurubSabangUt = HilalEngine.findSunsetNear(approxSunsetUt, sabangLat, sabangLon) ?: approxSunsetUt
+                        val ghurubSabangJde = ghurubSabangUt + DynamicalTimeEngine.deltaT(ghurubSabangUt) / 86400.0
+                        if (ijtimaJde < ghurubSabangJde) {
+                            isVisible = HilalEngine.computeHilalVisibility(
+                                ijtimaGeoJde = ijtimaJde,
+                                lat = sabangLat, lon = sabangLon, elev = 0.0,
+                                criteria = criteria,
+                                evalSunsetUt = ghurubSabangUt
+                            )
+                        }
+                    }
+                }
+            }
 
             val startJde = startOfDayLocal - tz / 24.0 + (if (isVisible) 1.0 else 2.0)
             startJdeCache[key] = startJde
             return startJde
         }
     }
+    private fun shiftHijriMonth(year: Int, month: Int, offset: Int): Pair<Int, Int> {
+        var shiftedYear = year
+        var shiftedMonth = month + offset
+
+        while (shiftedMonth > 12) {
+            shiftedMonth -= 12
+            shiftedYear += 1
+        }
+        while (shiftedMonth < 1) {
+            shiftedMonth += 12
+            shiftedYear -= 1
+        }
+
+        return shiftedYear to shiftedMonth
+    }
+
     fun getCorrectedHijri(
         jde: Double,
         lat: Double,
         lon: Double,
         elev: Double,
-        tz: Double
+        tz: Double,
+        criteria: String = "Mabims Baru"
     ): Triple<Int, Int, Int> {
         val approx = jdeToHijri(jde)
-        val hYear = approx.first
-        val hMonth = approx.second
+        val anchors = (-2..2).map { offset ->
+            val (hYear, hMonth) = shiftHijriMonth(approx.first, approx.second, offset)
+            Triple(hYear, hMonth, 1) to getStartJdeOfHijriMonth(
+                hYear, hMonth, lat, lon, elev, tz, criteria
+            )
+        }.sortedBy { it.second }
 
-        val startJde = getStartJdeOfHijriMonth(hYear, hMonth, lat, lon, elev, tz)
-        val tabStartJde = hijriToJde(hYear, hMonth, 1)
-        val offset = startJde - tabStartJde
+        return getHijriDateFromMonthAnchors(jde, tz, anchors) ?: jdeToHijri(jde)
+    }
 
-        return jdeToHijri(jde - offset)
+    fun getStartJdeOfIndonesianHijriMonth(
+        yH: Int,
+        mH: Int,
+        criteria: String = "Mabims Baru"
+    ): Double {
+        // Kalender nasional memakai acuan ufuk paling barat Indonesia.
+        return getStartJdeOfHijriMonth(
+            yH = yH,
+            mH = mH,
+            lat = INDONESIA_WEST_LAT,
+            lon = INDONESIA_WEST_LON,
+            elev = INDONESIA_WEST_ELEV,
+            tz = INDONESIA_WEST_TZ,
+            criteria = criteria
+        )
+    }
+
+    fun getIndonesianCalendarHijri(
+        jde: Double,
+        criteria: String = "Mabims Baru"
+    ): Triple<Int, Int, Int> {
+        return getCorrectedHijri(
+            jde = jde,
+            lat = INDONESIA_WEST_LAT,
+            lon = INDONESIA_WEST_LON,
+            elev = INDONESIA_WEST_ELEV,
+            tz = INDONESIA_WEST_TZ,
+            criteria = criteria
+        )
+    }
+
+    fun getHijriDateFromMonthAnchors(
+        localGregorianJde: Double,
+        timezone: Double,
+        anchors: List<Pair<Triple<Int, Int, Int>, Double>>
+    ): Triple<Int, Int, Int>? {
+        val localDayStartUt = localGregorianJde - timezone / 24.0
+        for (i in anchors.indices.reversed()) {
+            val startUt = anchors[i].second
+            if (localDayStartUt + 1e-7 >= startUt) {
+                val day = floor(localDayStartUt - startUt + 1.0 + 1e-7).toInt()
+                return Triple(
+                    anchors[i].first.first,
+                    anchors[i].first.second,
+                    day.coerceAtLeast(1)
+                )
+            }
+        }
+        return null
     }
 
     /**

@@ -62,6 +62,7 @@ import com.falak.falakpro.premium.PreferencesHelper
 import com.falak.falakpro.premium.AstroMoonEngine
 import com.falak.falakpro.premium.AstroDataUtils
 import com.falak.falakpro.premium.AstroMath
+import com.falak.falakpro.premium.AstroAssetPreloader
 import kotlinx.coroutines.delay
 import java.util.*
 import kotlin.math.*
@@ -74,6 +75,7 @@ fun QiblaKameraScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val prefs = remember { PreferencesHelper(context) }
+    val showSunMoon by rememberKiblatShowSunMoonState(prefs)
     val locationHelper = remember { LocationHelper(context) }
     val locationState by locationHelper.locationState.collectAsState()
 
@@ -93,23 +95,26 @@ fun QiblaKameraScreen(
         hasCameraPermission = permissions[Manifest.permission.CAMERA] ?: hasCameraPermission
         hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: hasLocationPermission
         
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+        if (prefs.lokasiOtomatis && permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
             locationHelper.startLocationUpdates()
         }
     }
 
     LaunchedEffect(Unit) {
         val needsCamera = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-        val needsLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+        val needsLocation = prefs.lokasiOtomatis &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
         
         if (needsCamera || needsLocation) {
-            permissionLauncher.launch(arrayOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ))
-        } else {
-            // Sudah punya izin, langsung jalankan GPS
+            val permissions = buildList {
+                add(Manifest.permission.CAMERA)
+                if (prefs.lokasiOtomatis) {
+                    add(Manifest.permission.ACCESS_FINE_LOCATION)
+                    add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                }
+            }.toTypedArray()
+            permissionLauncher.launch(permissions)
+        } else if (prefs.lokasiOtomatis) {
             locationHelper.startLocationUpdates()
         }
     }
@@ -317,10 +322,8 @@ fun QiblaKameraScreen(
                 val xSun = sin(decTSun) * cos(latR) - cos(decTSun) * sin(latR) * cos(hTSun)
                 sunAzimuth = AstroMath.mod(Math.toDegrees(atan2(ySun, xSun)), 360.0)
 
-                // Moon Alt/Az
-                try {
-                    com.falak.falakpro.premium.ElpDataProvider.initialize(context.assets.open("mpp02_core.bin"))
-                } catch (e: Exception) {}
+                // Moon Alt/Az: aset sudah dipreload sekali agar loop realtime tidak membuka file biner berulang.
+                AstroAssetPreloader.ensureCoreBlocking(context)
                 // ── Moon topocentric Az/Alt + refraction ──
                 val moonTopo = AstroMoonEngine.getTopocentricPosition(jdNow, lon, lat, prefs.manualElev)
                 val hR_moon = Math.toRadians(AstroMath.mod(gast + lon - moonTopo.first, 360.0))
@@ -504,7 +507,7 @@ fun QiblaKameraScreen(
             Row { Text("Az. Koreksi", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp, modifier=Modifier.width(90.dp)); Text(": ${fmtDms(azimuthCorrection.toDouble())}", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp) }
             Spacer(Modifier.height(12.dp))
             Row { Text("UTC Time", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp, modifier=Modifier.width(90.dp)); Text(": $utcTimeString", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp) }
-            if (prefs.kiblatShowSunMoon) {
+            if (showSunMoon) {
                 Row { Text("☀ Az|Alt", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp, modifier=Modifier.width(90.dp)); Text(": ${fmtAzAlt(sunAzimuth, sunAltitude)}", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp) }
                 Row { Text("Bayangan ☀", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp, modifier=Modifier.width(90.dp)); Text(": ${sunAzimuth?.let { fmtDms((it + 180.0) % 360.0) } ?: "-"}", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp) }
                 Row { Text("🌙 Az|Alt", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp, modifier=Modifier.width(90.dp)); Text(": ${fmtAzAlt(moonAzimuth, moonAltitude)}", color=Color.White, fontWeight=FontWeight.Bold, fontSize=11.sp) }

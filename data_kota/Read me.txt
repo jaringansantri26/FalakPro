@@ -1,0 +1,76 @@
+HISAB ASTRONOMIS
+
+Aplikasi Hisab Astronomis ini dibuat oleh Dewan Hisab dan Rukyat PP Persis.
+Pembuatan aplikasi ini dimulai sejak 18 Pebruari 2023 dan selesai untuk versi 0.1 nya 
+pada 12 Maret 2023.
+
+Algoritma aplikasi Hisab Astronomis ini menggunakan algoritma VSOP87D untuk menghitung 
+posisi Matahari dan ELP/MPP02 untuk menghitung posisi Bulan.
+
+Algoritma VSOP87D memuat 2.462 suku koreks (term) yaitu:
+Bujur (L)   = 1.080 term
+Lintang (B) = 384 term
+Jarak (R)   = 998 term
+
+Algoritma ELP/MPP02 memuat 35.901 suku koreksi (term) yaitu:
+Bujur (L)   = 13.757 term
+Lintang (B) = 7.948 term
+Jarak (R)   = 14.196 term
+
+Dengan demikian jumlah suku koreksi aplikasi hisab astronomis ini memuat 38.362 suku koreksi
+
+Selajutnya, terkait kriteria awal bulan yang digunakan dalam hisab astronomis adalah sbb:
+A) Imkan Rukyat IR MABIMS (IR MABIMS)    
+   [1] Ijtimak geosentris terjadi sebelum Ghurub Matahari
+   [2] tinggi hilal Mar'i center >=3° 
+   [3] elongasi geosentris >= 6,4°
+B) Wujudul Hilal
+   [1] Ijtimak geosentris terjadi sebelum Ghurub Matahari
+   [2] Bulan terbenam setelah Matahari
+   [3] Tinggi Bulan Mar'i Upperlimb positif di atas ufuk
+C) Imkan Rukyat Turki (IR Turki) versi KHGT
+   [1] Seluruh kawasan dunia dipandang sebagai satu kesatuan, sehingga bulan baru 
+       dimulai pada hari yang sama di seluruh kawasan dunia
+   [2] Awal bulan baru dimulai apabila terjadi imkan rukyat di belahan bumi manapun 
+       sebelum pukul 12 malam (00.00 GMT/07.00 WIB) dengan syarat ketinggian hilal 
+       minimal 5º dan elongasi minimal 8° pada saat terbenam matahari.
+   [3] Apabila imkan rukyat pertama di muka bumi terjadi melewati pukul 12 malam (00.00 GMT/07.00 WIB) 
+       bulan baru tetap dimulai dengan syarat:
+       a. Kriteria imkan rukyat (tinggi hilal minimal 5°, elongasi minimal 8°) 
+          terpenuhi dan telah terjadi konjungsi sebelum fajar di New Zealand,
+       b. Imkan rukyat menjangkau di daratan Benua Amerika.
+    Catatan: Dalam KHGT Muhamadiyah tinggi hilal 5° dan elongasi 8° dipahami sebagai
+             tinggi geosentris dan elongasi geosentris.
+D) Taqwim Ummul Qura
+   Kriteria Ummul Qura yang digunakan dalam hisab astronomis adalah kriteria Ummul Qura 
+   1423 H/2003 M yaitu:
+   [1] Ijtimak terjadi sebelum Ghurub Matahari
+   [2] Moon Set after Sunset (Bulan terbenam setelah Matahari terbenam)
+   Dengan demikian untuk kalender Ummul Qura sebelum tahun 2003 di Hisab Astronomis bisajadi 
+   berbeda dengan
+   Kalender Ummul Qura yang diterbitkan di Saudi.
+
+Kemudian, untuk menghadirkan menu kurva visibilitas hilal model Kastner, kami bekerjasama dengan 
+Dr. Judhistira Aria Utama, M.Si. dari Laboratorium Bumi dan Antariksa - Pusat Unggulan Sains Data Astronomi dan Polusi Cahaya
+Program Studi Fisika - Fakultas Pendidikan MIPA Universitas Pendidikan Indonesia
+
+Semoga aplikasi ini bermanfaat untuk anggota Jamiyyah Persatuan Islam khusunya, 
+umumnya bagi Ummat Islam di seluruh dunia. Dan semoga aplikasi ini menjadi jariah bagi kami.
+
+ttd
+
+Dewan Hisab dan Rukyat
+PP Persatuan Islam
+
+
+==================================
+Catatan:
+- Bila Aplikasi ini tidak jalan dikomputer anda, mungkin anda perlu menginstall 
+  Net Frame Work versi 4.0 yang di sertakan dalam paket download aplikasi ini yaitu file
+  dotNetFx40_Full_x86_x64.exe
+- Bila gambar terpotong saat di save, gunakan scalling 100% atau resolusi komputer 1366 x 768.
+- Kalau ada pertanyaan silahkan hubungi: 0895707233300 (Abu Sabda)
+- Donasi: Bank Mandiri 900-000-500-3448 an. Utsman
+ 
+
+

@@ -1,53 +1,38 @@
 package com.falak.falakpro.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Backspace
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -57,18 +42,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.falak.falakpro.ui.theme.GreenLightBg
-import com.falak.falakpro.ui.theme.GreenPrimary
 import java.util.Locale
 import kotlin.random.Random
 import kotlin.math.E
@@ -100,11 +82,11 @@ fun ScientificCalculatorScreen(
     var resultText by remember { mutableStateOf("0") }
     var errorText  by remember { mutableStateOf<String?>(null) }
     var degreesMode by remember { mutableStateOf(true) }
-    var shiftActive by remember { mutableStateOf(false) }
     var memory by remember { mutableDoubleStateOf(0.0) }
     var ans    by remember { mutableDoubleStateOf(0.0) }
     val history = remember { mutableStateListOf<CalculatorHistory>() }
     var showHelp by remember { mutableStateOf(false) }
+    var shiftActive by remember { mutableStateOf(false) }
 
     // ----- cursor-aware insert / delete -----
     fun insertAt(text: String) {
@@ -160,33 +142,54 @@ fun ScientificCalculatorScreen(
                 }
             }
         )
-        shiftActive = false
     }
 
-    // ----- SHIFT+DMS: decimal → D° M' S" -----
+    // ----- DMS: decimal → D° M' S" -----
     fun convertToDMS() {
         val value = ans
         val sign = if (value < 0) "-" else ""
-        val abs = kotlin.math.abs(value)
-        val d = abs.toInt()
-        val mFull = (abs - d) * 60.0
-        val m = mFull.toInt()
-        val s = (mFull - m) * 60.0
+        val absVal = kotlin.math.abs(value)
+        var d = absVal.toInt()
+        val mFull = (absVal - d) * 60.0
+        var m = mFull.toInt()
+        var s = (mFull - m) * 60.0
+        // Carry-over: round to 4 decimal places first, then check boundary
+        val sRounded = kotlin.math.round(s * 10000.0) / 10000.0
+        if (sRounded >= 60.0) {
+            s = 0.0
+            m += 1
+            if (m >= 60) {
+                m = 0
+                d += 1
+            }
+        } else {
+            s = sRounded
+        }
         resultText = "$sign${d}° ${m}' ${String.format(java.util.Locale.US, "%.4f", s)}\""
-        shiftActive = false
     }
 
-    // ----- SHIFT+HMS: decimal → H h M m S s -----
+    // ----- HMS: decimal → H h M m S s -----
     fun convertToHMS() {
         val value = ans
         val sign = if (value < 0) "-" else ""
-        val abs = kotlin.math.abs(value)
-        val h = abs.toInt()
-        val mFull = (abs - h) * 60.0
-        val m = mFull.toInt()
-        val s = (mFull - m) * 60.0
+        val absVal = kotlin.math.abs(value)
+        var h = absVal.toInt()
+        val mFull = (absVal - h) * 60.0
+        var m = mFull.toInt()
+        var s = (mFull - m) * 60.0
+        // Carry-over: round to 4 decimal places first, then check boundary
+        val sRounded = kotlin.math.round(s * 10000.0) / 10000.0
+        if (sRounded >= 60.0) {
+            s = 0.0
+            m += 1
+            if (m >= 60) {
+                m = 0
+                h += 1
+            }
+        } else {
+            s = sRounded
+        }
         resultText = "$sign${h}j ${m}m ${String.format(java.util.Locale.US, "%.4f", s)}d"
-        shiftActive = false
     }
 
     fun append(text: String) = insertAt(text)
@@ -204,48 +207,37 @@ fun ScientificCalculatorScreen(
             onDismissRequest = { showHelp = false },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { showHelp = false }) {
-                    Text("TUTUP")
+                    Text("TUTUP", fontWeight = FontWeight.Bold)
                 }
             },
-            title = { Text("Panduan Kalkulator", fontWeight = FontWeight.Bold) },
+            title = { Text("Panduan Lengkap Fungsi Tombol", fontWeight = FontWeight.Bold) },
             text = {
                 androidx.compose.foundation.lazy.LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val guides = listOf(
-                        "◄ / ►" to "Geser kursor kiri/kanan untuk edit ekspresi",
-                        "SHIFT" to "Aktifkan fungsi alternatif (label kuning di atas tombol)",
-                        "DMS" to "Masukkan derajat ke desimal: dms(6,18,48)",
-                        "SHIFT+DMS" to "Konversi hasil desimal → D° M' S\" (DMS)",
-                        "HMS" to "Masukkan jam ke desimal: hms(21,30,0)",
-                        "SHIFT+HMS" to "Konversi hasil desimal → Jj Mm Ss (HMS)",
-                        "sin/cos/tan" to "Fungsi trig — mode DEG/RAD sesuai status atas",
-                        "sind/cosd/tand" to "Selalu pakai derajat meski mode RAD",
-                        "sin⁻¹/cos⁻¹/tan⁻¹" to "Fungsi invers trig",
-                        "√x" to "Akar kuadrat: sqrt(9) = 3",
-                        "xʸ" to "Pangkat: 2^10 = 1024",
-                        "Log / Ln" to "Logaritma basis 10 / natural",
-                        "Abs" to "Nilai mutlak: abs(-5) = 5",
-                        "Mod" to "Sisa bagi: mod(10,3) = 1",
-                        "Int / Frac" to "Bagian bulat / desimal",
-                        "Floor / Ceil" to "Pembulatan ke bawah / ke atas",
-                        "Rnd" to "Pembulatan biasa",
-                        "Norm" to "Normalisasi 0–360°",
-                        "Norm-" to "Normalisasi -180° s.d. 180°",
-                        "nPr / nCr" to "Permutasi / Kombinasi",
-                        "SHIFT+nPr" to "GCD(a,b) — faktor persekutuan terbesar",
-                        "SHIFT+nCr" to "LCM(a,b) — kelipatan persekutuan terkecil",
-                        "Pol(x,y)" to "Polar: hitung r dari x,y",
-                        "Rec(r,θ)" to "Rectangular: hitung x dari r,θ",
-                        "Ran# / RanInt" to "Bilangan acak",
-                        "FACT" to "Faktorial: fact(5) = 120",
-                        "Ans" to "Gunakan hasil terakhir",
-                        "M+ / M- / MS" to "Memori tambah/kurang/simpan",
-                        "M (kunci MR)" to "Gunakan nilai memori dalam ekspresi",
-                        "pi / e" to "Konstanta π dan e",
-                        "Exp" to "Notasi ilmiah: 1.5e3 = 1500",
-                        "atan2(y,x)" to "Azimut/sudut arah dari koordinat",
-                        "Contoh Kiblat" to "atan2(sind(L2-L1), cosd(B)*tand(LK)-sind(B)*cosd(L2-L1))"
+                        "◄ / ► (Navigasi Kursor)" to "Geser kursor ke kiri atau kanan untuk menyisipkan angka atau fungsi.\nContoh: Ketik 'sin(30)' lalu tekan ◄ untuk mengubah angka di dalam kurung.",
+                        "SHIFT (Fungsi Sekunder)" to "Aktifkan fungsi berlabel warna BIRU / EMAS di atas tombol.\nContoh: Tekan SHIFT lalu sin → menghasilkan sin⁻¹ (asin).",
+                        "DEG / RAD (Mode Sudut)" to "Ubah mode antara DEG (Derajat) atau RAD (Radian) untuk fungsi trigonometri.\nContoh: Dalam mode DEG, sin(30) = 0.5.",
+                        "sin, cos, tan" to "Fungsi trigonometri utama (sinus, kosinus, tangen).\nContoh: sin(30) = 0.5 (dalam mode DEG).",
+                        "sin⁻¹, cos⁻¹, tan⁻¹ (SHIFT)" to "Invers trigonometri (Arcus). Menghasilkan sudut.\nContoh: asin(0.5) = 30°.",
+                        "atan2 (Arctangent 2 Argumen)" to "Arctangent 2 Argumen atan2(y, x). Sangat penting untuk perhitungan Azimut Kiblat & arah kuadran presisi (0°–360°).\nContoh: atan2(y, x).",
+                        "DMS & →DMS (Derajat Menit Detik)" to "Format dms(D, M, S) & Konversi desimal → DMS.\nContoh: dms(6, 18, 48) = 6.31333°. Tekan →DMS untuk mengubah 6.31333 kembali ke 6° 18' 48.00\".",
+                        "HMS & →HMS (Jam Menit Detik)" to "Format hms(H, M, S) & Konversi desimal → HMS.\nContoh: hms(21, 30, 0) = 21.5 Jam. Tekan →HMS untuk mengubah 21.5 kembali ke 21j 30m 00s.",
+                        "JD (Julian Day)" to "Hitung Nilai Julian Day dari tanggal: jd(Tahun, Bulan, Tanggal).\nContoh: jd(2026, 6, 6) = 2461198.5.",
+                        "ΔT (Delta T - SHIFT JD)" to "Nilai Koreksi Selisih Waktu WUD/UT: dt(JD).\nContoh: dt(2461198.5) = 69.1 detik.",
+                        "Norm & Norm- (Normalisasi Sudut)" to "Norm = Normalisasi sudut 0° s.d. 360°: norm360(sudut).\nNorm- = Normalisasi -180° s.d. +180°: norm180(sudut).\nContoh: norm360(-30) = 330°, norm180(200) = -160°.",
+                        "x², x³, xʸ, √x, ³√x" to "Pangkat & Akar. x² (kuadrat), x³ (kubik), xʸ (pangkat y), √x (akar kuadrat), ³√x (akar kubik).\nContoh: 5^2 = 25, 2^3 = 8, 2^10 = 1024, sqrt(16) = 4, cbrt(27) = 3.",
+                        "Log, Ln, 10ˣ, eˣ" to "Logaritma basis 10 log(x), natural ln(x), dan Eksponensial.\nContoh: log(100) = 2, ln(e) = 1, 10^2 = 100, e^1 = 2.71828.",
+                        "Abs & Mod" to "Abs = Nilai Mutlak abs(x). Mod = Sisa Bagi mod(a, b).\nContoh: abs(-15) = 15, mod(10, 3) = 1.",
+                        "Rnd & Int (Pembulatan)" to "Rnd = Pembulatan Normal (≥0.5 keatas, <0.5 kebawah): round(x).\nInt = Ambil bagian bulat saja: int(x).\nContoh: round(5.6) = 6, round(5.4) = 5, int(12.78) = 12.",
+                        "Floor & Ceil (Batas Pembulatan)" to "Floor = Pembulatan kebawah: floor(x).\nCeil = Pembulatan keatas: ceil(x).\nContoh: floor(3.9) = 3, ceil(3.1) = 4.",
+                        "nPr & nCr" to "Permutasi npr(n, r) & Kombinasi ncr(n, r).\nContoh: npr(5, 2) = 20, ncr(5, 2) = 10.",
+                        "GCD & LCM" to "GCD = FPB (Faktor Persekutuan Terbesar) gcd(a, b).\nLCM = KPK (Kelipatan Persekutuan Terkecil) lcm(a, b).\nContoh: gcd(12, 18) = 6, lcm(4, 6) = 12.",
+                        "Pol & Rec (Koordinat)" to "Pol = Konversi Rectangular (x,y) → Polar radius: pol(x, y).\nRec = Konversi Polar (r,θ) → Rectangular x: rec(r, θ).\nContoh: pol(3, 4) = 5.",
+                        "% & ! (Persen & Faktorial)" to "% = Persen (x/100).\n! = Faktorial (n!).\nContoh: 50% = 0.5, 5! = 120.",
+                        "π & e (Konstanta)" to "Konstanta Pi (π ≈ 3.14159) dan Euler (e ≈ 2.71828).",
+                        "Ans & Memori (MS, MR, M+, M-, MC)" to "Ans = Hasil perhitungan terakhir.\nMS = Simpan memori. MR = Panggil memori.\nM+ / M- = Tambah / Kurang memori. MC = Hapus memori."
                     )
                     items(guides.size) { i ->
                         val (key, desc) = guides[i]
@@ -256,9 +248,11 @@ fun ScientificCalculatorScreen(
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 desc,
                                 fontSize = 12.sp,
+                                lineHeight = 16.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             if (i < guides.size - 1) {
@@ -291,37 +285,35 @@ fun ScientificCalculatorScreen(
                 resultText = resultText,
                 errorText = errorText,
                 degreesMode = degreesMode,
-                shiftActive = shiftActive,
                 memory = memory,
+                shiftActive = shiftActive,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.22f)
+                    .weight(0.20f)
             )
             FxCalculatorToolbar(
                 palette = palette,
                 onNavigateBack = onNavigateBack,
-                shiftActive = shiftActive,
-                onToggleShift = { shiftActive = !shiftActive },
+                degreesMode = degreesMode,
                 onToggleMode = { degreesMode = !degreesMode },
-                onMemoryRecall = { append("M") },
-                onMemoryClear = { memory = 0.0 },
-                onShowHelp = { showHelp = true }
+                onShowHelp = { showHelp = true },
+                shiftActive = shiftActive,
+                onToggleShift = { shiftActive = !shiftActive }
             )
             FxCalculatorKeypad(
                 palette = palette,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.78f),
+                    .weight(0.80f),
                 shiftActive = shiftActive,
+                onShiftUsed = { shiftActive = false },
                 onInsert = ::insertAt,
-                onShiftConsumed = { shiftActive = false },
                 onEvaluate = ::evaluateCurrent,
                 onClear = {
                     expression = ""
                     cursorPos = 0
                     resultText = "0"
                     errorText = null
-                    shiftActive = false
                 },
                 onBackspace = ::backspaceAt,
                 onCursorLeft = ::moveCursorLeft,
@@ -338,6 +330,8 @@ fun ScientificCalculatorScreen(
                     evaluateCurrent()
                     memory = ans
                 },
+                onMemoryClear = { memory = 0.0 },
+                onMemoryRecall = { append("M") },
                 onUseAns = { insertAt("Ans") },
                 onConvertToDMS = ::convertToDMS,
                 onConvertToHMS = ::convertToHMS
@@ -351,43 +345,47 @@ private fun fxPalette(): FxPalette {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     return if (dark) {
         FxPalette(
-            pageBg = Color(0xFF0B0B0B),
-            displayBg = Color(0xFF101010),
-            toolbarBg = Color(0xFF151515),
-            keypadBg = Color(0xFF101010),
-            keyBg = Color(0xFF1B1B1B),
-            keyAltBg = Color(0xFF242424),
-            keyActionBg = Color(0xFF181818),
-            keyBorder = Color(0xFF303030),
-            primaryText = Color(0xFFEDEDED),
-            numberText = Color(0xFFD8D8D8),
-            displayText = Color(0xFF00D9FF),
-            statusText = Color(0xFF00D9FF),
-            shiftText = Color(0xFFC98400),
-            alphaText = Color(0xFFE53935),
-            operatorText = Color(0xFF00D9FF),
-            buttonBorder = Color(0xFF00A9CC),
-            clearText = Color(0xFFC98400)
+            pageBg = Color(0xFF13171F),
+            displayBg = Color(0xFF0D1117),
+            toolbarBg = Color(0xFF1F2430),
+            keypadBg = Color(0xFF13171F),
+            keyBg = Color(0xFF282C37),
+            keyNumBg = Color(0xFF3B404D),
+            keyOpBg = Color(0xFF212631),
+            keyActionBg = Color(0xFF282C37),
+            keyClearBg = Color(0xFF991B1B),
+            keyEqualsBg = Color(0xFF1D4ED8),
+            keyBorder = Color(0xFF0F1218),
+            primaryText = Color(0xFFF3F4F6),
+            numberText = Color(0xFFFFFFFF),
+            displayText = Color(0xFF38BDF8),
+            statusText = Color(0xFF94A3B8),
+            operatorText = Color(0xFF60A5FA),
+            buttonBorder = Color(0xFF475569),
+            shiftText = Color(0xFF60A5FA),
+            shiftBg = Color(0xFF2563EB)
         )
     } else {
         FxPalette(
-            pageBg = Color(0xFFE7E7E7),
-            displayBg = Color(0xFFF3F3F3),
-            toolbarBg = Color(0xFFCFCFCF),
-            keypadBg = Color(0xFFD8D8D8),
-            keyBg = Color(0xFFDCDCDC),
-            keyAltBg = Color(0xFFF3F3F3),
-            keyActionBg = Color(0xFFE9E9E9),
-            keyBorder = Color.White,
-            primaryText = Color(0xFF333333),
-            numberText = Color(0xFF333333),
-            displayText = Color(0xFF222222),
-            statusText = Color(0xFF3B3B3B),
-            shiftText = Color(0xFFC47A00),
-            alphaText = Color(0xFFC47A00),
-            operatorText = Color(0xFF333333),
-            buttonBorder = Color(0xFF777777),
-            clearText = Color(0xFFC47A00)
+            pageBg = Color(0xFFDDE1E7),
+            displayBg = Color(0xFFE2E8F0),
+            toolbarBg = Color(0xFFCBD5E1),
+            keypadBg = Color(0xFFDDE1E7),
+            keyBg = Color(0xFF334155),
+            keyNumBg = Color(0xFFFFFFFF),
+            keyOpBg = Color(0xFF475569),
+            keyActionBg = Color(0xFF334155),
+            keyClearBg = Color(0xFFDC2626),
+            keyEqualsBg = Color(0xFF2563EB),
+            keyBorder = Color(0xFFCBD5E1),
+            primaryText = Color(0xFFFFFFFF),
+            numberText = Color(0xFF0F172A),
+            displayText = Color(0xFF0F172A),
+            statusText = Color(0xFF475569),
+            operatorText = Color(0xFFFFFFFF),
+            buttonBorder = Color(0xFF94A3B8),
+            shiftText = Color(0xFF1E40AF),
+            shiftBg = Color(0xFF1D4ED8)
         )
     }
 }
@@ -398,18 +396,20 @@ private data class FxPalette(
     val toolbarBg: Color,
     val keypadBg: Color,
     val keyBg: Color,
-    val keyAltBg: Color,
+    val keyNumBg: Color,
+    val keyOpBg: Color,
     val keyActionBg: Color,
+    val keyClearBg: Color,
+    val keyEqualsBg: Color,
     val keyBorder: Color,
     val primaryText: Color,
     val numberText: Color,
     val displayText: Color,
     val statusText: Color,
-    val shiftText: Color,
-    val alphaText: Color,
     val operatorText: Color,
     val buttonBorder: Color,
-    val clearText: Color
+    val shiftText: Color,
+    val shiftBg: Color
 )
 
 @Composable
@@ -420,44 +420,56 @@ private fun FxCalculatorDisplay(
     resultText: String,
     errorText: String?,
     degreesMode: Boolean,
-    shiftActive: Boolean,
     memory: Double,
+    shiftActive: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Tampilkan ekspresi dengan kursor blok |
     val displayExpr = buildString {
         val pos = cursorPos.coerceIn(0, expression.length)
         append(expression.substring(0, pos))
-        append("│")   // karakter cursor
+        append("│")
         append(expression.substring(pos))
     }
 
     Column(
         modifier = modifier
             .background(palette.displayBg)
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            listOf(
-                if (shiftActive) "SHIFT" else "",
-                if (degreesMode) "DEG" else "RAD",
-                if (memory == 0.0) "" else "M"
+            if (shiftActive) {
+                Text(
+                    text = "SHIFT",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = palette.shiftText,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = if (degreesMode) "DEG" else "RAD",
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = palette.statusText,
+                modifier = Modifier.padding(start = 8.dp)
             )
-                .filter { it.isNotBlank() }
-                .forEach { item ->
-                    Text(
-                        text = item,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = palette.statusText,
-                        modifier = Modifier.padding(start = 10.dp)
-                    )
-                }
+            if (memory != 0.0) {
+                Text(
+                    text = "M",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = palette.statusText,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -466,8 +478,8 @@ private fun FxCalculatorDisplay(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             fontFamily = FontFamily.Monospace,
-            fontSize = 16.sp,
-            lineHeight = 20.sp,
+            fontSize = 17.sp,
+            lineHeight = 21.sp,
             color = palette.displayText
         )
         Spacer(modifier = Modifier.weight(1f))
@@ -478,8 +490,8 @@ private fun FxCalculatorDisplay(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
             fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = if (errorText == null) 22.sp else 12.sp,
+            fontWeight = FontWeight.Bold,
+            fontSize = if (errorText == null) 24.sp else 13.sp,
             color = if (errorText == null) palette.displayText else MaterialTheme.colorScheme.error
         )
     }
@@ -489,80 +501,73 @@ private fun FxCalculatorDisplay(
 private fun FxCalculatorToolbar(
     palette: FxPalette,
     onNavigateBack: () -> Unit,
-    shiftActive: Boolean,
-    onToggleShift: () -> Unit,
+    degreesMode: Boolean,
     onToggleMode: () -> Unit,
-    onMemoryRecall: () -> Unit,
-    onMemoryClear: () -> Unit,
-    onShowHelp: () -> Unit
+    onShowHelp: () -> Unit,
+    shiftActive: Boolean,
+    onToggleShift: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(46.dp)
+            .height(44.dp)
             .background(palette.toolbarBg)
-            .padding(horizontal = 8.dp, vertical = 5.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedButton(
             onClick = onNavigateBack,
-            modifier = Modifier
-                .height(36.dp)
-                .weight(1.2f),
-            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.height(34.dp).weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
             border = BorderStroke(1.dp, palette.buttonBorder),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.statusText)
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("BACK", fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(3.dp))
+            Text("BACK", fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1)
         }
-        OutlinedButton(
+        // SHIFT button — Casio Deep Blue when normal, Amber Gold when active
+        androidx.compose.material3.Button(
             onClick = onToggleShift,
-            modifier = Modifier.height(36.dp).weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, if (shiftActive) palette.shiftText else palette.buttonBorder),
-            colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = Color.Transparent,
-                contentColor = if (shiftActive) palette.shiftText else palette.statusText
+            modifier = Modifier.height(34.dp).weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = if (shiftActive) Color(0xFFD97706) else palette.shiftBg,
+                contentColor = Color.White
             )
         ) {
-            Text("SHIFT", fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Text(
+                text = "SHIFT",
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp,
+                maxLines = 1
+            )
+        }
+        OutlinedButton(
+            onClick = onToggleMode,
+            modifier = Modifier.height(34.dp).weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
+            border = BorderStroke(1.dp, palette.buttonBorder),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.statusText)
+        ) {
+            Text(if (degreesMode) "DEG" else "RAD", fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1)
         }
         OutlinedButton(
             onClick = onShowHelp,
-            modifier = Modifier.height(36.dp).weight(1f),
-            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier.height(34.dp).weight(1f),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp),
             border = BorderStroke(1.dp, palette.buttonBorder),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.statusText)
         ) {
-            Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("HELP", fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+            Icon(Icons.Filled.History, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(3.dp))
+            Text("HELP", fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1)
         }
-    }
-}
-
-@Composable
-private fun FxSmallCommand(
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    active: Boolean = false
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(36.dp),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, if (active) Color(0xFFC47A00) else Color(0xFF777777)),
-        contentPadding = ButtonDefaults.ContentPadding,
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (active) Color(0xFFFFF3D4) else Color.Transparent,
-            contentColor = if (active) Color(0xFFC47A00) else Color(0xFF333333)
-        )
-    ) {
-        Text(label, fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 11.sp)
     }
 }
 
@@ -571,8 +576,8 @@ private fun FxCalculatorKeypad(
     palette: FxPalette,
     modifier: Modifier = Modifier,
     shiftActive: Boolean,
+    onShiftUsed: () -> Unit,
     onInsert: (String) -> Unit,
-    onShiftConsumed: () -> Unit,
     onEvaluate: () -> Unit,
     onClear: () -> Unit,
     onBackspace: () -> Unit,
@@ -581,106 +586,138 @@ private fun FxCalculatorKeypad(
     onMemoryAdd: () -> Unit,
     onMemorySubtract: () -> Unit,
     onMemoryStore: () -> Unit,
+    onMemoryClear: () -> Unit,
+    onMemoryRecall: () -> Unit,
     onUseAns: () -> Unit,
     onConvertToDMS: () -> Unit,
     onConvertToHMS: () -> Unit
 ) {
     val rows = listOf(
+        // Row 1: Navigation & Memory
         listOf(
-            FxKey("ALPHA", "", "", "", FxKeyKind.Action),
-            FxKey("◄", "", "", "", FxKeyKind.Action, action = onCursorLeft),
-            FxKey("►", "", "", "", FxKeyKind.Action, action = onCursorRight),
-            FxKey("2nd", "", "", "", FxKeyKind.Action),
-            FxKey("MODE", "", "", "", FxKeyKind.Action),
-            FxKey("MATH", "", "", "", FxKeyKind.Action)
+            FxKey("◄", kind = FxKeyKind.Action, action = onCursorLeft),
+            FxKey("►", kind = FxKeyKind.Action, action = onCursorRight),
+            FxKey("(", "("),
+            FxKey(")", ")"),
+            FxKey("MS", action = onMemoryStore, kind = FxKeyKind.Memory,
+                shiftLabel = "MC", shiftAction = onMemoryClear),
+            FxKey("MR", action = onMemoryRecall, kind = FxKeyKind.Memory,
+                shiftLabel = "M+", shiftAction = onMemoryAdd)
         ),
+        // Row 2: Trig — primary & inverse via SHIFT + atan2/tan2
         listOf(
-            FxKey("sin", "sin(", "sinD", "sind("),
-            FxKey("cos", "cos(", "cosD", "cosd("),
-            FxKey("tan", "tan(", "tanD", "tand("),
-            FxKey("sin⁻¹", "asin(", "asinD", "asind("),
-            FxKey("cos⁻¹", "acos(", "acosD", "acosd("),
-            FxKey("tan⁻¹", "atan(", "atanD", "atand(")
+            FxKey("sin", "sin(",    shiftLabel = "sin⁻¹", shiftInsert = "asin("),
+            FxKey("cos", "cos(",    shiftLabel = "cos⁻¹", shiftInsert = "acos("),
+            FxKey("tan", "tan(",    shiftLabel = "tan⁻¹", shiftInsert = "atan("),
+            FxKey("atan2", "atan2("),
+            FxKey("√x",  "sqrt(",   shiftLabel = "³√x",   shiftInsert = "cbrt("),
+            FxKey("Log", "log(",    shiftLabel = "Ln",    shiftInsert = "ln(")
         ),
+        // Row 3: Power & Roots & Falak Conversions
         listOf(
-            FxKey("√x", "sqrt(", "x²", "^2"),
-            FxKey("xʸ", "^", "pow", "pow("),
-            FxKey("Log", "log(", "10ˣ", "10^"),
-            FxKey("Ln", "ln(", "eˣ", "e^"),
-            FxKey("Abs", "abs(", "|x|", "abs("),
-            FxKey("Mod", "mod(", "", "")
+            FxKey("x²",  "^2",    shiftLabel = "x³",   shiftInsert = "^3"),
+            FxKey("xʸ",  "^",     shiftLabel = "10ˣ",  shiftInsert = "10^"),
+            FxKey("DMS", "dms(",  shiftLabel = "→DMS", shiftAction = onConvertToDMS),
+            FxKey("HMS", "hms(",  shiftLabel = "→HMS", shiftAction = onConvertToHMS),
+            FxKey("JD",  "jd(",   shiftLabel = "ΔT",   shiftInsert = "dt("),
+            FxKey("Abs", "abs(",  shiftLabel = "Mod",  shiftInsert = "mod(")
         ),
+        // Row 4: Rounding & Combinatorics & Pol/Rec
         listOf(
-            // DMS: normal=masukkan dms(, SHIFT=konversi hasil ke DMS
-            FxKey("DMS", "dms(", "→DMS", "", shiftAction = onConvertToDMS),
-            // HMS: normal=masukkan hms(, SHIFT=konversi hasil ke HMS
-            FxKey("HMS", "hms(", "→HMS", "", shiftAction = onConvertToHMS),
-            FxKey("Int", "int(", "", ""),
-            FxKey("Frac", "frac(", "", ""),
-            FxKey("Floor", "floor(", "", ""),
-            FxKey("Ceil", "ceil(", "", "")
+            FxKey("Rnd",  "round(",  shiftLabel = "Int",   shiftInsert = "int("),
+            FxKey("Floor","floor(",  shiftLabel = "Frac",  shiftInsert = "frac("),
+            FxKey("Norm", "norm360(",shiftLabel = "Norm-", shiftInsert = "norm180("),
+            FxKey("nPr",  "npr(",    shiftLabel = "nCr",   shiftInsert = "ncr("),
+            FxKey("GCD",  "gcd(",    shiftLabel = "LCM",   shiftInsert = "lcm("),
+            FxKey("Pol",  "pol(",    shiftLabel = "Rec",   shiftInsert = "rec(")
         ),
+        // Row 5: Numbers 7-9 & Actions
         listOf(
-            FxKey("x⁻¹", "^-1", "x!", "!"),
-            FxKey("x³", "^3", "³√x", "cbrt("),
-            FxKey("x√y", "root(", "", ""),
-            FxKey("hyp", "", "", ""),
-            FxKey("nPr", "npr(", "GCD", "gcd("),
-            FxKey("nCr", "ncr(", "LCM", "lcm(")
+            FxKey("7", "7", kind = FxKeyKind.Number),
+            FxKey("8", "8", kind = FxKeyKind.Number),
+            FxKey("9", "9", kind = FxKeyKind.Number),
+            FxKey("DEL", kind = FxKeyKind.Clear, action = onBackspace),
+            FxKey("AC",  kind = FxKeyKind.Clear, action = onClear),
+            FxKey("/",   "/", kind = FxKeyKind.Operator)
         ),
+        // Row 6: Numbers 4-6 & Operators
         listOf(
-            FxKey("Rnd", "round(", "", ""),
-            FxKey("Norm", "norm360(", "", ""),
-            FxKey("Norm-", "norm180(", "", ""),
-            FxKey("%", "%", "", ""),
-            FxKey("(", "(", "", ""),
-            FxKey(")", ")", "", "")
+            FxKey("4", "4", kind = FxKeyKind.Number),
+            FxKey("5", "5", kind = FxKeyKind.Number),
+            FxKey("6", "6", kind = FxKeyKind.Number),
+            FxKey("*", "*", kind = FxKeyKind.Operator),
+            FxKey(",", ",", kind = FxKeyKind.Operator, shiftLabel = "%", shiftInsert = "%"),
+            FxKey("M-", action = onMemorySubtract, kind = FxKeyKind.Memory)
         ),
+        // Row 7: Numbers 1-3 & Memory
         listOf(
-            FxKey("Pol", "pol(", "", ""),
-            FxKey("Rec", "rec(", "", ""),
-            FxKey("Ran#", "ran(", "", ""),
-            FxKey("RanInt", "ranint(", "", ""),
-            FxKey("FACT", "fact(", "", ""),
-            FxKey("ENG", "", "", "")
+            FxKey("1", "1", kind = FxKeyKind.Number),
+            FxKey("2", "2", kind = FxKeyKind.Number),
+            FxKey("3", "3", kind = FxKeyKind.Number),
+            FxKey("+", "+", kind = FxKeyKind.Operator),
+            FxKey("-", "-", kind = FxKeyKind.Operator),
+            FxKey("M+", action = onMemoryAdd, kind = FxKeyKind.Memory)
         ),
+        // Row 8: 0 / . / Constants / Ans / Equals
         listOf(
-            FxKey("7", "7", "CONST", "", FxKeyKind.Number),
-            FxKey("8", "8", "CONV", "", FxKeyKind.Number),
-            FxKey("9", "9", "", "", FxKeyKind.Number),
-            FxKey("DEL", "", "", "", FxKeyKind.Action, onBackspace),
-            FxKey("CLR", "", "ALL", "", FxKeyKind.Clear, onClear),
-            FxKey("/", "/", "", "", FxKeyKind.Operator)
-        ),
-        listOf(
-            FxKey("4", "4", "", "", FxKeyKind.Number),
-            FxKey("5", "5", "", "", FxKeyKind.Number),
-            FxKey("6", "6", "", "", FxKeyKind.Number),
-            FxKey("*", "*", "", "", FxKeyKind.Operator),
-            FxKey(",", ",", "", "", FxKeyKind.Operator),
-            FxKey("M+", "", "", "", FxKeyKind.Memory, onMemoryAdd)
-        ),
-        listOf(
-            FxKey("1", "1", "", "", FxKeyKind.Number),
-            FxKey("2", "2", "", "", FxKeyKind.Number),
-            FxKey("3", "3", "", "", FxKeyKind.Number),
-            FxKey("+", "+", "", "", FxKeyKind.Operator),
-            FxKey("-", "-", "", "", FxKeyKind.Operator),
-            FxKey("M-", "", "", "", FxKeyKind.Memory, onMemorySubtract)
-        ),
-        listOf(
-            FxKey("0", "0", "", "", FxKeyKind.Number),
-            FxKey(".", ".", "Ran#", "", FxKeyKind.Number),
-            FxKey("Exp", "e", "π", "pi"),
-            FxKey("Ans", "", "PreAns", "", FxKeyKind.Memory, onUseAns),
-            FxKey("MS", "", "", "", FxKeyKind.Memory, onMemoryStore),
-            FxKey("=", "", "History", "", FxKeyKind.Equals, onEvaluate)
+            FxKey("0", "0", kind = FxKeyKind.Number),
+            FxKey(".", ".", kind = FxKeyKind.Number),
+            FxKey("e",   "e",  shiftLabel = "π", shiftInsert = "pi"),
+            FxKey("Ans", action = onUseAns, kind = FxKeyKind.Memory),
+            FxKey("(",   "(",  shiftLabel = "!", shiftInsert = "!"),
+            FxKey("=", kind = FxKeyKind.Equals, action = onEvaluate)
         )
     )
 
-    Column(modifier = modifier.background(palette.keypadBg)) {
-        rows.forEach { row ->
-            Row(modifier = Modifier.weight(1f)) {
+    Column(
+        modifier = modifier
+            .background(palette.keypadBg)
+            .padding(start = 4.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
+    ) {
+        rows.forEachIndexed { rowIdx, row ->
+            // SHIFT label row — sits visually RIGHT ABOVE its button capsule (Casio style)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(13.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                row.forEach { key ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .wrapContentHeight(unbounded = true)
+                            .padding(bottom = 1.dp),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        if (key.shiftLabel.isNotBlank()) {
+                            val shiftColor = if (shiftActive) Color(0xFFF59E0B) else palette.shiftText
+                            Text(
+                                text = key.shiftLabel,
+                                fontSize = 9.sp,
+                                maxLines = 1,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.SansSerif,
+                                color = shiftColor,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    fontSize = 9.sp,
+                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                        includeFontPadding = false
+                                    )
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Actual button capsule row
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
                 row.forEach { key ->
                     FxCalculatorKey(
                         palette = palette,
@@ -688,30 +725,27 @@ private fun FxCalculatorKeypad(
                         shiftActive = shiftActive,
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            when {
-                                // SHIFT aktif dan ada shiftAction khusus → jalankan
-                                shiftActive && key.shiftAction != null -> {
-                                    key.shiftAction.invoke()
+                            val hasShift = key.shiftInsert.isNotBlank() || key.shiftAction != null
+                            if (shiftActive && hasShift) {
+                                when {
+                                    key.shiftAction != null -> key.shiftAction.invoke()
+                                    key.shiftInsert.isNotBlank() -> onInsert(key.shiftInsert)
                                 }
-                                // SHIFT aktif dan ada shiftInsert → sisipkan teks
-                                shiftActive && key.shiftInsert.isNotBlank() -> {
-                                    onInsert(key.shiftInsert)
-                                    onShiftConsumed()
-                                }
-                                // Normal action (DEL, CLR, cursor, dll)
-                                key.action != null -> {
-                                    key.action.invoke()
-                                    if (shiftActive) onShiftConsumed()
-                                }
-                                // Insert teks biasa
-                                key.insert.isNotBlank() -> {
-                                    onInsert(key.insert)
-                                    if (shiftActive) onShiftConsumed()
+                                onShiftUsed()
+                            } else {
+                                when {
+                                    key.action != null -> key.action.invoke()
+                                    key.insert.isNotBlank() -> onInsert(key.insert)
                                 }
                             }
                         }
                     )
                 }
+            }
+
+            // Spacer between rows (except after last row)
+            if (rowIdx < rows.lastIndex) {
+                Spacer(modifier = Modifier.height(2.dp))
             }
         }
     }
@@ -729,90 +763,64 @@ private fun FxCalculatorKey(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val bg = when (key.kind) {
-        FxKeyKind.Number -> palette.keyAltBg
-        FxKeyKind.Operator -> palette.keyBg
+        FxKeyKind.Number   -> palette.keyNumBg
+        FxKeyKind.Operator -> palette.keyOpBg
         FxKeyKind.Function -> palette.keyBg
-        FxKeyKind.Memory -> palette.keyBg
-        FxKeyKind.Action -> palette.keyActionBg
-        FxKeyKind.Clear -> palette.keyAltBg
-        FxKeyKind.Equals -> palette.keyActionBg
+        FxKeyKind.Memory   -> palette.keyBg
+        FxKeyKind.Action   -> palette.keyActionBg
+        FxKeyKind.Clear    -> palette.keyClearBg
+        FxKeyKind.Equals   -> palette.keyEqualsBg
     }
+    val pressedBg = if (isPressed) bg.copy(alpha = 0.75f) else bg
 
-    // Warna lebih gelap saat ditekan
-    val pressedBg = if (isPressed) bg.copy(alpha = (bg.alpha * 0.6f).coerceAtLeast(0.15f)) else bg
-
-    Button(
-        onClick = onClick,
+    // Only the button capsule — SHIFT label is rendered separately above in the label row
+    Surface(
         modifier = modifier.fillMaxSize(),
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(0.dp),
+        shape = RoundedCornerShape(6.dp),
+        color = pressedBg,
+        shadowElevation = 0.dp,
         border = BorderStroke(
             width = if (isPressed) 1.2.dp else 0.6.dp,
             color = if (isPressed) palette.buttonBorder else palette.keyBorder
-        ),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = pressedBg,
-            contentColor = palette.primaryText
-        ),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(1.dp)
+        )
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (key.shiftLabel.isNotBlank()) {
-                Text(
-                    text = key.shiftLabel,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 2.dp, start = 2.dp, end = 2.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    fontSize = 7.5.sp,
-                    lineHeight = 8.sp,
-                    fontFamily = FontFamily.SansSerif,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    color = if (shiftActive) palette.alphaText else palette.shiftText
-                )
-            }
-            val labelLen = key.label.length
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                ),
+            contentAlignment = Alignment.Center
+        ) {
             val fontSize = when {
-                key.kind == FxKeyKind.Number    -> 24.sp
-                key.kind == FxKeyKind.Operator  -> 23.sp
-                key.kind == FxKeyKind.Equals    -> 24.sp
-                key.kind == FxKeyKind.Clear     -> 16.sp
-                key.kind == FxKeyKind.Action    -> 12.sp
-                key.kind == FxKeyKind.Memory    -> 17.sp
-                labelLen <= 1                   -> 22.sp
-                labelLen <= 2                   -> 20.sp
-                labelLen <= 3                   -> 18.sp
-                labelLen <= 4                   -> 16.sp
-                labelLen <= 5                   -> 14.sp
-                labelLen <= 6                   -> 12.sp
-                else                            -> 10.sp
+                key.kind == FxKeyKind.Number   -> 19.sp
+                key.kind == FxKeyKind.Equals   -> 19.sp
+                key.kind == FxKeyKind.Operator -> 18.sp
+                key.label.length <= 1 -> 17.sp
+                key.label.length <= 2 -> 15.sp
+                key.label.length <= 3 -> 13.sp
+                key.label.length <= 4 -> 11.sp
+                key.label.length <= 5 -> 10.sp
+                else -> 9.sp
             }
+
             Text(
                 text = key.label,
-                modifier = Modifier
-                    .align(if (key.shiftLabel.isBlank()) Alignment.Center else Alignment.BottomCenter)
-                    .padding(
-                        start = 1.dp,
-                        end = 1.dp,
-                        bottom = if (key.shiftLabel.isBlank()) 0.dp else 4.dp
-                    ),
+                textAlign = TextAlign.Center,
                 maxLines = 1,
-                overflow = TextOverflow.Clip,
+                overflow = TextOverflow.Ellipsis,
                 fontSize = fontSize,
-                lineHeight = fontSize,
                 fontFamily = FontFamily.SansSerif,
                 fontWeight = when (key.kind) {
-                    FxKeyKind.Number -> FontWeight.Medium
-                    FxKeyKind.Operator, FxKeyKind.Memory -> FontWeight.SemiBold
-                    else -> FontWeight.Bold
+                    FxKeyKind.Number -> FontWeight.Bold
+                    FxKeyKind.Equals, FxKeyKind.Clear -> FontWeight.Bold
+                    else -> FontWeight.SemiBold
                 },
-                textAlign = TextAlign.Center,
                 color = when (key.kind) {
-                    FxKeyKind.Clear -> palette.clearText
-                    FxKeyKind.Operator, FxKeyKind.Equals -> palette.operatorText
                     FxKeyKind.Number -> palette.numberText
+                    FxKeyKind.Clear, FxKeyKind.Equals -> Color.White
                     else -> palette.primaryText
                 }
             )
@@ -820,358 +828,17 @@ private fun FxCalculatorKey(
     }
 }
 
-@Composable
-private fun CalculatorDisplay(
-    expression: String,
-    resultText: String,
-    errorText: String?,
-    degreesMode: Boolean,
-    memory: Double,
-    onExpressionChange: (String) -> Unit,
-    onToggleMode: () -> Unit,
-    onClear: () -> Unit,
-    onBackspace: () -> Unit,
-    onUseAns: () -> Unit,
-    onMemoryRecall: () -> Unit,
-    onMemoryClear: () -> Unit,
-    onCopyResult: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AssistChip(onClick = onToggleMode, label = { Text(if (degreesMode) "DEG" else "RAD") })
-                AssistChip(onClick = onUseAns, label = { Text("Ans") })
-                AssistChip(onClick = onMemoryRecall, label = { Text("MR") })
-                AssistChip(onClick = onMemoryClear, label = { Text("MC") })
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "M=${formatCalculatorNumber(memory)}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            OutlinedTextField(
-                value = expression,
-                onValueChange = onExpressionChange,
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-                maxLines = 4,
-                label = { Text("Ekspresi") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 18.sp
-                )
-            )
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = GreenLightBg,
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = resultText,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 26.sp,
-                        color = GreenPrimary
-                    )
-                    if (errorText != null) {
-                        Text(
-                            text = errorText,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.End,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("AC")
-                }
-                OutlinedButton(onClick = onBackspace, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Backspace, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("DEL")
-                }
-                OutlinedButton(onClick = onCopyResult, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("USE")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalculatorShortcutPanel(
-    onInsert: (String) -> Unit,
-    onSetExpression: (String) -> Unit
-) {
-    val shortcuts = listOf(
-        "DMS" to "dms(",
-        "HMS" to "hms(",
-        "JD" to "jd(",
-        "Delta T" to "dt(",
-        "Mod" to "mod(",
-        "Abs" to "abs(",
-        "Int" to "int(",
-        "Frac" to "frac(",
-        "Floor" to "floor(",
-        "Ceil" to "ceil(",
-        "Rnd" to "round(",
-        "Norm" to "norm360(",
-        "Norm-" to "norm180(",
-        "sinD" to "sind(",
-        "cosD" to "cosd(",
-        "tanD" to "tand("
-    )
-    val examples = listOf(
-        "Azimut kiblat" to "atan2(sind(39.8262-107.3191), cosd(-6.3133)*tand(21.4225)-sind(-6.3133)*cosd(39.8262-107.3191))",
-        "JD hari ini" to "jd(2026,6,6)",
-        "Delta T 2026" to "dt(jd(2026,6,6))",
-        "DMS ke derajat" to "dms(6,18,48)"
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Fungsi falak cepat", fontWeight = FontWeight.Bold)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 154.dp),
-                userScrollEnabled = false,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(shortcuts) { shortcut ->
-                    OutlinedButton(
-                        onClick = { onInsert(shortcut.second) },
-                        modifier = Modifier.height(40.dp),
-                        contentPadding = ButtonDefaults.ContentPadding
-                    ) {
-                        Text(shortcut.first, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                examples.take(2).forEach { example ->
-                    Button(
-                        onClick = { onSetExpression(example.second) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                    ) {
-                        Text(example.first, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                examples.drop(2).forEach { example ->
-                    Button(
-                        onClick = { onSetExpression(example.second) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                    ) {
-                        Text(example.first, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalculatorKeypad(
-    onInsert: (String) -> Unit,
-    onEvaluate: () -> Unit,
-    onClear: () -> Unit,
-    onBackspace: () -> Unit,
-    onMemoryAdd: () -> Unit,
-    onMemorySubtract: () -> Unit,
-    onMemoryStore: () -> Unit
-) {
-    val keys = listOf(
-        CalcKey("sin", "sin(", CalcKeyKind.Function),
-        CalcKey("cos", "cos(", CalcKeyKind.Function),
-        CalcKey("tan", "tan(", CalcKeyKind.Function),
-        CalcKey("ln", "ln(", CalcKeyKind.Function),
-        CalcKey("log", "log(", CalcKeyKind.Function),
-        CalcKey("sqrt", "sqrt(", CalcKeyKind.Function),
-        CalcKey("x^y", "^", CalcKeyKind.Operator),
-        CalcKey("x!", "!", CalcKeyKind.Operator),
-        CalcKey("%", "%", CalcKeyKind.Operator),
-        CalcKey("mod", "mod(", CalcKeyKind.Function),
-        CalcKey("pi", "pi", CalcKeyKind.Function),
-        CalcKey("e", "e", CalcKeyKind.Function),
-        CalcKey("7", "7", CalcKeyKind.Number),
-        CalcKey("8", "8", CalcKeyKind.Number),
-        CalcKey("9", "9", CalcKeyKind.Number),
-        CalcKey("/", "/", CalcKeyKind.Operator),
-        CalcKey("4", "4", CalcKeyKind.Number),
-        CalcKey("5", "5", CalcKeyKind.Number),
-        CalcKey("6", "6", CalcKeyKind.Number),
-        CalcKey("*", "*", CalcKeyKind.Operator),
-        CalcKey("1", "1", CalcKeyKind.Number),
-        CalcKey("2", "2", CalcKeyKind.Number),
-        CalcKey("3", "3", CalcKeyKind.Number),
-        CalcKey("-", "-", CalcKeyKind.Operator),
-        CalcKey("0", "0", CalcKeyKind.Number),
-        CalcKey(".", ".", CalcKeyKind.Number),
-        CalcKey(",", ",", CalcKeyKind.Operator),
-        CalcKey("+", "+", CalcKeyKind.Operator),
-        CalcKey("M+", "", CalcKeyKind.Memory, onMemoryAdd),
-        CalcKey("M-", "", CalcKeyKind.Memory, onMemorySubtract),
-        CalcKey("MS", "", CalcKeyKind.Memory, onMemoryStore),
-        CalcKey("=", "", CalcKeyKind.Equals, onEvaluate)
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(448.dp),
-                userScrollEnabled = false,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(keys) { key ->
-                    CalculatorKeyButton(
-                        key = key,
-                        onClick = {
-                            key.action?.invoke() ?: onInsert(key.insert)
-                        }
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("AC") }
-                OutlinedButton(onClick = onBackspace, modifier = Modifier.weight(1f)) { Text("DEL") }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalculatorKeyButton(
-    key: CalcKey,
-    onClick: () -> Unit
-) {
-    val colors = when (key.kind) {
-        CalcKeyKind.Number -> ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-        CalcKeyKind.Operator -> ButtonDefaults.buttonColors(
-            containerColor = GreenLightBg,
-            contentColor = GreenPrimary
-        )
-        CalcKeyKind.Function -> ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        )
-        CalcKeyKind.Memory -> ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        )
-        CalcKeyKind.Equals -> ButtonDefaults.buttonColors(
-            containerColor = GreenPrimary,
-            contentColor = Color.White
-        )
-    }
-
-    Button(
-        onClick = onClick,
-        modifier = Modifier.height(48.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = colors,
-        contentPadding = ButtonDefaults.ContentPadding
-    ) {
-        Text(key.label, fontWeight = FontWeight.Bold, fontSize = 14.sp, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun HistoryRow(
-    item: CalculatorHistory,
-    onUseExpression: () -> Unit,
-    onUseResult: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(item.expression, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-                Text(
-                    item.result,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    color = GreenPrimary
-                )
-            }
-            OutlinedButton(onClick = onUseExpression) { Text("EXPR") }
-            Button(onClick = onUseResult, colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary)) {
-                Text("ANS")
-            }
-        }
-    }
-}
 
 private data class CalculatorHistory(val expression: String, val result: String)
 
 private data class FxKey(
     val label: String,
-    val insert: String,
-    val shiftLabel: String = "",
-    val shiftInsert: String = "",
+    val insert: String = "",
     val kind: FxKeyKind = FxKeyKind.Function,
     val action: (() -> Unit)? = null,
-    val shiftAction: (() -> Unit)? = null  // aksi khusus saat SHIFT aktif
+    val shiftLabel: String = "",
+    val shiftInsert: String = "",
+    val shiftAction: (() -> Unit)? = null
 )
 
 private enum class FxKeyKind {
@@ -1184,22 +851,8 @@ private enum class FxKeyKind {
     Equals
 }
 
-private data class CalcKey(
-    val label: String,
-    val insert: String,
-    val kind: CalcKeyKind,
-    val action: (() -> Unit)? = null
-)
-
-private enum class CalcKeyKind {
-    Number,
-    Operator,
-    Function,
-    Memory,
-    Equals
-}
-
 private fun formatCalculatorNumber(value: Double): String {
+
     if (value.isNaN() || value.isInfinite()) return "Math ERROR"
     val absValue = abs(value)
     return when {
@@ -1282,24 +935,15 @@ private class ScientificExpressionEvaluator(
         }
 
         private fun parseTerm(): Double {
-            var value = parsePower()
+            var value = parseUnary()
             while (true) {
                 skipSpaces()
                 value = when {
-                    consume('*') -> value * parsePower()
-                    consume('/') -> value / parsePower()
+                    consume('*') -> value * parseUnary()
+                    consume('/') -> value / parseUnary()
                     else -> return value
                 }
             }
-        }
-
-        private fun parsePower(): Double {
-            var value = parseUnary()
-            skipSpaces()
-            if (consume('^')) {
-                value = value.pow(parsePower())
-            }
-            return value
         }
 
         private fun parseUnary(): Double {
@@ -1307,8 +951,17 @@ private class ScientificExpressionEvaluator(
             return when {
                 consume('+') -> parseUnary()
                 consume('-') -> -parseUnary()
-                else -> parsePostfix()
+                else -> parsePower()
             }
+        }
+
+        private fun parsePower(): Double {
+            var value = parsePostfix()
+            skipSpaces()
+            if (consume('^')) {
+                value = value.pow(parseUnary())
+            }
+            return value
         }
 
         private fun parsePostfix(): Double {
@@ -1436,27 +1089,26 @@ private class ScientificExpressionEvaluator(
             "asind" -> Math.toDegrees(asin(one()))
             "acosd" -> Math.toDegrees(acos(one()))
             "atand" -> Math.toDegrees(atan(one()))
-            "atan2" -> {
+            "atan2", "tan2", "atan2d", "tan2d" -> {
                 val (y, x) = two()
                 if (degreesMode) Math.toDegrees(kotlin.math.atan2(y, x)) else kotlin.math.atan2(y, x)
             }
             "sqrt" -> sqrt(one())
             "cbrt" -> Math.cbrt(one())
             "ln" -> ln(one())
-            "log" -> log10(one())
+            "log" -> {
+                if (args.size == 1) log10(args[0])
+                else if (args.size == 2) kotlin.math.log(args[0], args[1])
+                else throw IllegalArgumentException("log perlu 1 atau 2 argumen: log(x) atau log(x, base)")
+            }
             "exp" -> exp(one())
             "abs" -> abs(one())
             "int" -> truncate(one())
             "trunc", "truncate" -> truncate(one())
-            "normal" -> round(one())
-            "keatas" -> ceil(one())
-            "kebawah" -> floor(one())
-            "floor" -> floor(one())
-            "ceil" -> ceil(one())
-            "round" -> round(one())
+            "round", "rnd", "normal" -> round(one())
             "rad" -> Math.toRadians(one())
             "deg" -> Math.toDegrees(one())
-            "frac" -> one() - floor(one())
+            "frac", "prac" -> one() - floor(one())
             "sign" -> kotlin.math.sign(one())
             "norm360" -> normalize360(one())
             "norm180" -> normalize180(one())
@@ -1508,6 +1160,26 @@ private class ScientificExpressionEvaluator(
                 val (r, theta) = two()
                 r * cos(if (degreesMode) Math.toRadians(theta) else theta)
             }
+            "floor", "kebawah" -> kotlin.math.floor(one())
+            "ceil", "keatas" -> kotlin.math.ceil(one())
+            "jd" -> {
+                // Julian Day dari jd(tahun, bulan, hari)
+                val (yr, mo, dy) = three()
+                val y = yr.toInt(); val m = mo.toInt(); val d = dy.toInt()
+                val a = (14 - m) / 12
+                val ye = y + 4800 - a
+                val mn = m + 12 * a - 3
+                (d + (153 * mn + 2) / 5 + ye * 365 + ye / 4 - ye / 100 + ye / 400 - 32045).toDouble() - 0.5
+            }
+            "dt", "deltat" -> {
+                // Delta T dari JD (perkiraan modern)
+                val jd = one()
+                val t = (jd - 2451545.0) / 36525.0
+                val dt = 62.92 + 0.32217 * t + 0.005589 * t * t
+                dt
+            }
+            "pi" -> Math.PI
+            "e" -> Math.E
             "min" -> args.minOrNull() ?: throw IllegalArgumentException("min perlu argumen")
             "max" -> args.maxOrNull() ?: throw IllegalArgumentException("max perlu argumen")
             else -> throw IllegalArgumentException("Fungsi tidak dikenal: $name")

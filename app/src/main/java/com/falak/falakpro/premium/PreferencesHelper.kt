@@ -71,6 +71,13 @@ class PreferencesHelper(context: Context) {
         get() = prefs.getBoolean("lokasiOtomatis", true)
         set(value) = prefs.edit().putBoolean("lokasiOtomatis", value).apply()
 
+    var locationInputMode: String
+        get() = prefs.getString("locationInputMode", if (lokasiOtomatis) "GPS" else "MANUAL") ?: "MANUAL"
+        set(value) = prefs.edit()
+            .putString("locationInputMode", value)
+            .putBoolean("lokasiOtomatis", value == "GPS")
+            .apply()
+
     var manualLokasiNama: String
         get() = prefs.getString("manualLokasiNama", "Lokasi Manual") ?: "Lokasi Manual"
         set(value) = prefs.edit().putString("manualLokasiNama", value).apply()
@@ -145,6 +152,14 @@ class PreferencesHelper(context: Context) {
     var is24HourFormat: Boolean
         get() = prefs.getBoolean("is24HourFormat", true)
         set(value) = prefs.edit().putBoolean("is24HourFormat", value).apply()
+
+    fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        prefs.unregisterOnSharedPreferenceChangeListener(listener)
+    }
 }
 
 private fun defaultTimezoneFromLongitude(longitude: Double): Double = when {

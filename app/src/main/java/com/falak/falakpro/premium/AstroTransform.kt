@@ -7,6 +7,11 @@ import kotlin.math.*
  * Ekliptik ↔ Ekuatorial ↔ Horizontal
  */
 object AstroTransform {
+    const val AA_EARTH_EQUATORIAL_RADIUS_KM = 6378.14
+    const val AA_EARTH_EQUATORIAL_RADIUS_M = 6378140.0
+    const val AA_HORIZON_REFRACTION_DEG = 34.0 / 60.0
+    const val AA_MOON_HORIZON_REFRACTION_DEG = 34.5 / 60.0
+    const val AA_DIP_DEG_PER_SQRT_M = 0.0293
 
     /**
      * Konversi Koordinat Ekliptik → Ekuatorial
@@ -100,8 +105,8 @@ object AstroTransform {
 
         // Koreksi bentuk Bumi (oblateness)
         val u = atan(0.99664719 * tan(latRad))
-        val rhoSinPhi = 0.99664719 * sin(u) + (heightM / 6378140.0) * sin(latRad)
-        val rhoCosPhi = cos(u) + (heightM / 6378140.0) * cos(latRad)
+        val rhoSinPhi = 0.99664719 * sin(u) + (heightM / AA_EARTH_EQUATORIAL_RADIUS_M) * sin(latRad)
+        val rhoCosPhi = cos(u) + (heightM / AA_EARTH_EQUATORIAL_RADIUS_M) * cos(latRad)
 
         val sinHp = sin(hpRad)
 
@@ -121,15 +126,19 @@ object AstroTransform {
     }
 
     /**
-     * Koreksi Refraksi Atmosfer (formula Bennett - Meeus Ch. 16)
+     * Koreksi Refraksi Atmosfer untuk tinggi sejati/geometris.
+     *
+     * Meeus, Astronomical Algorithms Ch. 16 gives this Bennett form to convert
+     * true altitude to apparent altitude. The inverse-looking 7.31/(h+4.4)
+     * form is for apparent-to-true reduction, so do not use it here.
+     *
      * @param altGeometric_deg Ketinggian geometris (derajat)
      * @return koreksi refraksi (derajat)
      */
     fun atmosphericRefraction(altGeometric_deg: Double): Double {
-        val h = max(altGeometric_deg, -5.0)
-        // Formula Bennett (1982) - Meeus h > -1
-        val ref = 1.0 / tan(Math.toRadians(h + 7.31 / (h + 4.4)))
-        return (ref + 0.001351) / 60.0 // Koreksi tambahan Meeus agar selaras di ufuk (~34')
+        val h = max(altGeometric_deg, -1.0)
+        val refArcMin = 1.02 / tan(Math.toRadians(h + 10.3 / (h + 5.11)))
+        return refArcMin / 60.0
     }
 
     /**
@@ -138,16 +147,16 @@ object AstroTransform {
      * @return Dip dalam derajat (negatif)
      */
     fun dipCorrection(heightM: Double, usePersis: Boolean = false): Double {
-        val coeff = if (usePersis) 2.1 else 0.0293 // Degrees: 0.0293 deg = 1.758' (Meeus standard)
+        val coeff = if (usePersis) 2.1 else AA_DIP_DEG_PER_SQRT_M // Degrees: 0.0293 deg = 1.758' (AA Ch. 15)
         return -coeff * sqrt(max(0.0, heightM))
     }
 
-    const val MEEUS_GHURUB_REFRACTION = 34.0 / 60.0 // Standard 34'
+    const val MEEUS_GHURUB_REFRACTION = AA_HORIZON_REFRACTION_DEG // Standard 34'
 
     /**
      * Koreksi Paralaks Matahari ke Toposentrik
      */
     fun solarParallax(distanceAU: Double): Double {
-        return Math.toDegrees(asin(6378.14 / (distanceAU * 149597870.7)))
+        return Math.toDegrees(asin(AA_EARTH_EQUATORIAL_RADIUS_KM / (distanceAU * 149597870.7)))
     }
 }

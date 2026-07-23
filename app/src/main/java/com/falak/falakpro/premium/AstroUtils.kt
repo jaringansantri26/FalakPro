@@ -18,16 +18,12 @@ object AstroDataUtils {
     }
 
     fun calculateNutation(jde: Double): Pair<Double, Double> {
-        val n = Nutation()
-        // PERSIS v1.8 Nutation (105 terms)
-        return Pair(n.nutationInLongitude(jde), n.nutationInObliquity(jde))
+        val nutation = Iau2006Nutation.compute(jde)
+        return Pair(nutation.deltaPsiDeg, nutation.deltaEpsilonDeg)
     }
 
     fun calculateTrueObliquity(jde: Double): Double {
-        val t = (jde - 2451545.0) / 36525.0
-        val u = t / 100.0
-        val eps0 = 23.0 + 26.0/60.0 + 21.448/3600.0 + (-4680.93*u - 1.55*u*u + 1999.25*u.pow(3) - 51.38*u.pow(4) - 249.67*u.pow(5) - 39.05*u.pow(6) + 7.12*u.pow(7) + 27.87*u.pow(8) + 5.79*u.pow(9) + 2.45*u.pow(10)) / 3600.0
-        return eps0 + calculateNutation(jde).second
+        return Iau2006Nutation.trueObliquityDeg(jde)
     }
 
     fun calculateGAST(jdUT: Double): Double {
@@ -54,9 +50,7 @@ object AstroDataUtils {
     }
 
     fun eclipticToEquatorial(lambdaTrue: Double, beta: Double, jde: Double): Pair<Double, Double> {
-        val t = (jde - 2451545.0) / 36525.0
-        val u = t / 100.0
-        val eps0 = 23.0 + 26.0/60.0 + 21.448/3600.0 + (-4680.93*u - 1.55*u*u + 1999.25*u.pow(3) - 51.38*u.pow(4) - 249.67*u.pow(5) - 39.05*u.pow(6) + 7.12*u.pow(7) + 27.87*u.pow(8) + 5.79*u.pow(9) + 2.45*u.pow(10)) / 3600.0
+        val eps0 = Iau2006Nutation.meanObliquityDeg(jde)
         val l = rad(lambdaTrue); val b = rad(beta)
         val ra = atan2(sin(l) * cos(rad(eps0)) - tan(b) * sin(rad(eps0)), cos(l))
         val dec = asin(sin(b) * cos(rad(eps0)) + cos(b) * sin(rad(eps0)) * sin(l))

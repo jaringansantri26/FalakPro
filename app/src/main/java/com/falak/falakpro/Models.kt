@@ -24,8 +24,9 @@ import kotlinx.coroutines.withContext
 // --- ENUMS & DATA MODELS ---
 
 enum class LocationMode {
+    MANUAL,
+    DAFTAR_KOTA,
     OTOMATIS,
-    MANUAL
 }
 
 enum class KriteriaHilal(val label: String) {
@@ -172,7 +173,7 @@ fun evaluateKriteria(res: com.falak.falakpro.AddurulAniq.IjtimaResult, kriteria:
     val ijtimaBeforeGhurub = res.waktuIjtimaLT < res.ghrbWdHaqiqi
     return when (kriteria) {
         KriteriaHilal.YALLOP -> ijtimaBeforeGhurub && yallopQ(res.bedaTinggi, res.eloSathi, res.sdcMoon) > -0.293
-        KriteriaHilal.MABIMS_BARU -> res.hcSathi >= 3.0 && res.eloSathi >= 6.4
+        KriteriaHilal.MABIMS_BARU -> res.hcSathi >= 3.0 && res.eloMarkazi >= 6.4
         KriteriaHilal.MABIMS_LAMA -> res.hcSathi >= 2.0 && res.eloSathi >= 3.0 && res.umurHilal >= 8.0
         KriteriaHilal.WUJUDUL_HILAL -> ijtimaBeforeGhurub && res.hcMarkazi > 0.0
         KriteriaHilal.KGHT_TURKI -> res.hcSathi >= 5.0 && res.eloMarkazi >= 8.0

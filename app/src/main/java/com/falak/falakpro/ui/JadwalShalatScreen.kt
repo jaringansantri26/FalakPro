@@ -1,4 +1,4 @@
-﻿package com.falak.falakpro.ui
+package com.falak.falakpro.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -28,25 +28,30 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.falak.falakpro.location.LocationHelper
 import com.falak.falakpro.premium.CalendarFunctions
 import com.falak.falakpro.premium.MesinWaktuShalat
 import com.falak.falakpro.premium.PreferencesHelper
+import com.falak.falakpro.premium.WaktuShalatCache
+import com.falak.falakpro.premium.WaktuShalatSettingsResolver
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import android.content.pm.PackageManager
 
 // --- Colors ---
-private val JadwalGradientTop = Color(0xFF28B498)
-private val JadwalGradientBottom = Color(0xFF0F7C6A)
-private val JadwalHighlightBackground = Color(0xFFE8F5E9)
+private val JadwalGradientTop = Color(0xFF0B6B35)
+private val JadwalGradientBottom = Color(0xFF00897B)
+private val JadwalHighlightBackground = Color(0xFFE0F2F1)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JadwalShalatScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToKiblat: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { PreferencesHelper(context) }
@@ -67,6 +72,7 @@ fun JadwalShalatScreen(
             prefs = prefs,
             settingsVersion = settingsVersion,
             onNavigateBack = onNavigateBack,
+            onNavigateToKiblat = onNavigateToKiblat,
             onOpenSettings = { showSettings = true }
         )
     }
@@ -79,22 +85,87 @@ fun JadwalShalatMainContent(
     prefs: PreferencesHelper,
     settingsVersion: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToKiblat: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
     val locationHelper = remember { LocationHelper(context) }
     val locationState by locationHelper.locationState.collectAsState()
     
-    var lokasiOtomatisState by remember(settingsVersion) { mutableStateOf(prefs.lokasiOtomatis) }
+    var locationInputMode by remember(settingsVersion) { mutableStateOf(prefs.locationInputMode) }
+    var locationRevision by remember { mutableIntStateOf(0) }
+    var showLocationChoiceSheet by remember { mutableStateOf(false) }
+    var showCityPickerDialog by remember { mutableStateOf(false) }
+    val lokasiOtomatisState = locationInputMode == "GPS"
     var showCetakDialog by remember { mutableStateOf(false) }
     
     var currentDate by remember { mutableStateOf(Calendar.getInstance()) }
     var currentTimeMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     
+    LaunchedEffect(lokasiOtomatisState) {
+        if (lokasiOtomatisState) {
+            locationHelper.startLocationUpdates()
+        }
+    }
+
     LaunchedEffect(Unit) {
-        locationHelper.startLocationUpdates()
-        while(true) {
+        while (true) {
             currentTimeMillis = System.currentTimeMillis()
             delay(1000)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineGranted || coarseGranted) {
+            locationInputMode = "GPS"
+            prefs.locationInputMode = "GPS"
+            Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
+            locationHelper.refreshLocation { success ->
+                Toast.makeText(
+                    context,
+                    if (success) "Lokasi berhasil diperbarui!"
+                    else "Gagal memperbarui lokasi. Nyalakan GPS Anda.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            Toast.makeText(context, "Izin lokasi ditolak", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun useCurrentLocation() {
+        val hasPermission =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            locationInputMode = "GPS"
+            prefs.locationInputMode = "GPS"
+            Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
+            locationHelper.refreshLocation { success ->
+                Toast.makeText(
+                    context,
+                    if (success) "Lokasi berhasil diperbarui!"
+                    else "Gagal memperbarui lokasi. Nyalakan GPS Anda.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        } else {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -105,87 +176,150 @@ fun JadwalShalatMainContent(
         }
     }
 
-    val lat = if (lokasiOtomatisState) (if (locationState.latitude != 0.0) locationState.latitude else -6.3133) else prefs.manualLat
-    val lon = if (lokasiOtomatisState) (if (locationState.longitude != 0.0) locationState.longitude else 107.3191) else prefs.manualLon
-    val elev = prefs.ketinggianDataranTinggi
-    val tz = if (lokasiOtomatisState) timezoneFromLongitude(lon) else prefs.manualTimezone
+    val savedManualLat = remember(locationRevision, settingsVersion) { prefs.manualLat }
+    val savedManualLon = remember(locationRevision, settingsVersion) { prefs.manualLon }
+    val savedManualElev = remember(locationRevision, settingsVersion) { prefs.ketinggianDataranTinggi }
+    val savedManualTimezone = remember(locationRevision, settingsVersion) { prefs.manualTimezone }
+    val savedManualLocationName = remember(locationRevision, settingsVersion) { prefs.manualLokasiNama }
+    val lat = if (lokasiOtomatisState) (if (locationState.latitude != 0.0) locationState.latitude else -6.3133) else savedManualLat
+    val lon = if (lokasiOtomatisState) (if (locationState.longitude != 0.0) locationState.longitude else 107.3191) else savedManualLon
+    val elev = if (lokasiOtomatisState && locationState.altitude != 0.0) locationState.altitude else savedManualElev
+    val tz = if (lokasiOtomatisState) timezoneFromLongitude(lon) else savedManualTimezone
     val tzLabel = prayerTimezoneLabel(tz, lon)
-    val locName = if (lokasiOtomatisState) (if (locationState.address != "Mencari Lokasi...") locationState.address else "Lokasi Tidak Diketahui") else prefs.manualLokasiNama
-
-    val kriteria = if (prefs.pengaturanOtomatis) {
-        MesinWaktuShalat.DAFTAR_KRITERIA[1]
-    } else if (prefs.kriteriaIndex == 0) {
-        MesinWaktuShalat.KriteriaWaktuShalat(
-            "Sesuaikan Sudut Manual",
-            prefs.sudutManualSubuh.toDouble(),
-            prefs.sudutManualIsya.toDouble(),
-            1.0,
-            4.5
-        )
-    } else {
-        MesinWaktuShalat.DAFTAR_KRITERIA.getOrElse(prefs.kriteriaIndex) { MesinWaktuShalat.KRITERIA_LFNU }
-    }
-    
-    val asharFactor = if (prefs.metodeAsharSyafii) 1.0 else 2.0
-
-    val modePembulatan = when (prefs.pembulatanIndex) {
-        1 -> MesinWaktuShalat.ModePembulatan.KE_ATAS
-        2 -> MesinWaktuShalat.ModePembulatan.KE_BAWAH
-        else -> MesinWaktuShalat.ModePembulatan.NORMAL
-    }
-
-    val jadwal = remember(currentDate, lat, lon, elev, tz, prefs.kriteriaIndex, prefs.pengaturanOtomatis, prefs.sudutManualSubuh, prefs.sudutManualIsya, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.ikhSubuh, prefs.ikhImsak, prefs.ikhTerbit, prefs.ikhDhuha, prefs.metodeAsharSyafii, prefs.pembulatanIndex) {
-        MesinWaktuShalat.hitung(
-            konteks = context,
-            tahun = currentDate.get(Calendar.YEAR),
-            bulan = currentDate.get(Calendar.MONTH) + 1,
-            hari = currentDate.get(Calendar.DAY_OF_MONTH),
-            lintang = lat,
-            bujur = lon,
-            elevasi = elev,
-            zonaWaktu = tz,
-            kriteria = kriteria,
-            ikhImsak = prefs.ikhImsak,
-            ikhSubuh = prefs.ikhSubuh,
-            ikhTerbit = prefs.ikhTerbit,
-            ikhDhuha = prefs.ikhDhuha,
-            ikhDzuhur = prefs.ikhDzuhur,
-            ikhAshar = prefs.ikhAshar,
-            ikhMaghrib = prefs.ikhMaghrib,
-            ikhIsya = prefs.ikhIsya,
-            pembulatan = modePembulatan,
-            gunakanElevasi = true,
-            faktorAshar = asharFactor,
-            is24HourFormat = prefs.is24HourFormat
+    val locName = if (lokasiOtomatisState) (if (locationState.address != "Mencari Lokasi...") locationState.address else "Lokasi Tidak Diketahui") else savedManualLocationName
+    val selectedGregorianJd = remember(
+        currentDate.get(Calendar.YEAR),
+        currentDate.get(Calendar.MONTH),
+        currentDate.get(Calendar.DAY_OF_MONTH)
+    ) {
+        CalendarFunctions.gregorianToJde(
+            currentDate.get(Calendar.YEAR),
+            currentDate.get(Calendar.MONTH) + 1,
+            currentDate.get(Calendar.DAY_OF_MONTH).toDouble()
         )
     }
+    val hijriCriteria = prefs.kriteriaAwalBulan
+    val selectedHijri by produceState<Triple<Int, Int, Int>?>(
+        initialValue = null,
+        selectedGregorianJd,
+        hijriCriteria
+    ) {
+        value = runCatching {
+            calculateSyncedHijriDate(context, selectedGregorianJd, hijriCriteria)
+        }.getOrNull()
+    }
+
+    val resolvedSettings = WaktuShalatSettingsResolver.resolve(prefs)
+    val kriteria = resolvedSettings.kriteria
+
     val tomorrowDateForNext = remember(currentDate) {
         (currentDate.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
     }
-    val jadwalTomorrowForNext = remember(tomorrowDateForNext, lat, lon, elev, tz, prefs.kriteriaIndex, prefs.pengaturanOtomatis, prefs.sudutManualSubuh, prefs.sudutManualIsya, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.ikhSubuh, prefs.ikhImsak, prefs.ikhTerbit, prefs.ikhDhuha, prefs.metodeAsharSyafii, prefs.pembulatanIndex) {
-        MesinWaktuShalat.hitung(
-            konteks = context,
-            tahun = tomorrowDateForNext.get(Calendar.YEAR),
-            bulan = tomorrowDateForNext.get(Calendar.MONTH) + 1,
-            hari = tomorrowDateForNext.get(Calendar.DAY_OF_MONTH),
-            lintang = lat,
-            bujur = lon,
-            elevasi = elev,
-            zonaWaktu = tz,
+    val todayKey = remember(currentDate, lat, lon, elev, tz, kriteria, resolvedSettings, prefs.ikhSubuh, prefs.ikhTerbit, prefs.ikhDhuha, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.is24HourFormat) {
+        WaktuShalatCache.key(
+            year = currentDate.get(Calendar.YEAR),
+            month = currentDate.get(Calendar.MONTH) + 1,
+            day = currentDate.get(Calendar.DAY_OF_MONTH),
+            lat = lat,
+            lon = lon,
+            elev = elev,
+            timezone = tz,
             kriteria = kriteria,
-            ikhImsak = prefs.ikhImsak,
-            ikhSubuh = prefs.ikhSubuh,
-            ikhTerbit = prefs.ikhTerbit,
-            ikhDhuha = prefs.ikhDhuha,
-            ikhDzuhur = prefs.ikhDzuhur,
-            ikhAshar = prefs.ikhAshar,
-            ikhMaghrib = prefs.ikhMaghrib,
-            ikhIsya = prefs.ikhIsya,
-            pembulatan = modePembulatan,
-            gunakanElevasi = true,
-            faktorAshar = asharFactor,
+            subuh = prefs.ikhSubuh,
+            terbit = prefs.ikhTerbit,
+            dhuha = prefs.ikhDhuha,
+            dzuhur = prefs.ikhDzuhur,
+            ashar = prefs.ikhAshar,
+            maghrib = prefs.ikhMaghrib,
+            isya = prefs.ikhIsya,
+            pembulatan = resolvedSettings.pembulatan,
+            faktorAshar = resolvedSettings.faktorAshar,
             is24HourFormat = prefs.is24HourFormat
         )
+    }
+    val tomorrowKey = remember(tomorrowDateForNext, lat, lon, elev, tz, kriteria, resolvedSettings, prefs.ikhSubuh, prefs.ikhTerbit, prefs.ikhDhuha, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.is24HourFormat) {
+        WaktuShalatCache.key(
+            year = tomorrowDateForNext.get(Calendar.YEAR),
+            month = tomorrowDateForNext.get(Calendar.MONTH) + 1,
+            day = tomorrowDateForNext.get(Calendar.DAY_OF_MONTH),
+            lat = lat,
+            lon = lon,
+            elev = elev,
+            timezone = tz,
+            kriteria = kriteria,
+            subuh = prefs.ikhSubuh,
+            terbit = prefs.ikhTerbit,
+            dhuha = prefs.ikhDhuha,
+            dzuhur = prefs.ikhDzuhur,
+            ashar = prefs.ikhAshar,
+            maghrib = prefs.ikhMaghrib,
+            isya = prefs.ikhIsya,
+            pembulatan = resolvedSettings.pembulatan,
+            faktorAshar = resolvedSettings.faktorAshar,
+            is24HourFormat = prefs.is24HourFormat
+        )
+    }
+    val emptySchedule = remember {
+        listOf("Imsak", "Subuh", "Terbit", "Dhuha", "Dzuhur", "Ashar", "Maghrib", "Isya")
+            .map { MesinWaktuShalat.HasilWaktuShalat(it, "--:--", "--:--:--", 0.0) }
+    }
+    val jadwal by produceState(
+        initialValue = WaktuShalatCache.peek(todayKey) ?: emptySchedule,
+        todayKey
+    ) {
+        value = WaktuShalatCache.getOrCompute(context, todayKey) {
+            MesinWaktuShalat.hitung(
+                konteks = context,
+                tahun = currentDate.get(Calendar.YEAR),
+                bulan = currentDate.get(Calendar.MONTH) + 1,
+                hari = currentDate.get(Calendar.DAY_OF_MONTH),
+                lintang = lat,
+                bujur = lon,
+                elevasi = elev,
+                zonaWaktu = tz,
+                kriteria = kriteria,
+                ikhSubuh = prefs.ikhSubuh,
+                ikhTerbit = prefs.ikhTerbit,
+                ikhDhuha = prefs.ikhDhuha,
+                ikhDzuhur = prefs.ikhDzuhur,
+                ikhAshar = prefs.ikhAshar,
+                ikhMaghrib = prefs.ikhMaghrib,
+                ikhIsya = prefs.ikhIsya,
+                pembulatan = resolvedSettings.pembulatan,
+                gunakanElevasi = true,
+                faktorAshar = resolvedSettings.faktorAshar,
+                is24HourFormat = prefs.is24HourFormat
+            )
+        }
+    }
+    val jadwalTomorrowForNext by produceState(
+        initialValue = WaktuShalatCache.peek(tomorrowKey) ?: emptySchedule,
+        tomorrowKey
+    ) {
+        value = WaktuShalatCache.getOrCompute(context, tomorrowKey) {
+            MesinWaktuShalat.hitung(
+                konteks = context,
+                tahun = tomorrowDateForNext.get(Calendar.YEAR),
+                bulan = tomorrowDateForNext.get(Calendar.MONTH) + 1,
+                hari = tomorrowDateForNext.get(Calendar.DAY_OF_MONTH),
+                lintang = lat,
+                bujur = lon,
+                elevasi = elev,
+                zonaWaktu = tz,
+                kriteria = kriteria,
+                ikhSubuh = prefs.ikhSubuh,
+                ikhTerbit = prefs.ikhTerbit,
+                ikhDhuha = prefs.ikhDhuha,
+                ikhDzuhur = prefs.ikhDzuhur,
+                ikhAshar = prefs.ikhAshar,
+                ikhMaghrib = prefs.ikhMaghrib,
+                ikhIsya = prefs.ikhIsya,
+                pembulatan = resolvedSettings.pembulatan,
+                gunakanElevasi = true,
+                faktorAshar = resolvedSettings.faktorAshar,
+                is24HourFormat = prefs.is24HourFormat
+            )
+        }
     }
 
     // Find next prayer
@@ -221,6 +355,30 @@ fun JadwalShalatMainContent(
         val m = (diff / (1000 * 60)) % 60
         val h = (diff / (1000 * 60 * 60)) % 24
         countdownStr = String.format(Locale.US, "%02d : %02d : %02d", h, m, s)
+    }
+
+    if (showLocationChoiceSheet) {
+        LocationChoiceSheet(
+            onDismiss = { showLocationChoiceSheet = false },
+            onSearchLocation = {
+                showLocationChoiceSheet = false
+                showCityPickerDialog = true
+            },
+            onUseCurrentLocation = {
+                showLocationChoiceSheet = false
+                useCurrentLocation()
+            }
+        )
+    }
+    if (showCityPickerDialog) {
+        CityLocationPickerDialog(
+            onDismiss = { showCityPickerDialog = false },
+            onSelect = { city ->
+                applyCityLocationToPrefs(prefs, city)
+                locationInputMode = "DAFTAR_KOTA"
+                locationRevision++
+            }
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -300,26 +458,19 @@ fun JadwalShalatMainContent(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.clickable { 
-                            lokasiOtomatisState = true
-                            prefs.lokasiOtomatis = true
-                            Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
-                            locationHelper.refreshLocation { success ->
-                                if (success) {
-                                    Toast.makeText(context, "Lokasi berhasil diperbarui!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Gagal memperbarui lokasi. Nyalakan GPS Anda.", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }, 
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Outlined.GpsFixed, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Update", color = Color.White, fontSize = 14.sp)
+                        Text(
+                            "Update",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            modifier = Modifier.clickable { showLocationChoiceSheet = true }
+                        )
                     }
-                    Row(modifier = Modifier.clickable { /* Goto Kiblat */ }, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Explore, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Row(modifier = Modifier.clickable { onNavigateToKiblat() }, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Explore, contentDescription = "Buka Kompas Kiblat", tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Arah Kiblat", color = Color.White, fontSize = 14.sp)
                     }
@@ -342,7 +493,7 @@ fun JadwalShalatMainContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .offset(y = (-20).dp),
+                            .padding(top = 16.dp, bottom = 8.dp),
                         shape = RoundedCornerShape(12.dp),
                         shadowElevation = 4.dp,
                         color = Color.White
@@ -366,15 +517,11 @@ fun JadwalShalatMainContent(
                                 val sdf = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
                                 Text(text = sdf.format(currentDate.time), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                 
-                                val jdToday = CalendarFunctions.gregorianToJde(
-                                    currentDate.get(Calendar.YEAR),
-                                    currentDate.get(Calendar.MONTH) + 1,
-                                    currentDate.get(Calendar.DAY_OF_MONTH).toDouble()
-                                )
-                                val hijri = CalendarFunctions.getCorrectedHijri(jdToday, lat, lon, elev, tz)
-                                val hijriMonths = listOf("Muharram", "Safar", "Rabiul Awal", "Rabiul Akhir", "Jumadil Awal", "Jumadil Akhir", "Rajab", "Sya'ban", "Ramadhan", "Syawal", "Dzulqa'dah", "Dzulhijjah")
-                                val mName = hijriMonths.getOrElse(hijri.second - 1) { "" }
-                                Text(text = "${hijri.third} $mName ${hijri.first}", fontSize = 13.sp, color = Color.Gray)
+                                val hijriText = selectedHijri?.let { hijri ->
+                                    val mName = CalendarFunctions.HIJRI_MONTH_NAMES.getOrElse(hijri.second - 1) { "" }
+                                    "${hijri.third} $mName ${hijri.first}"
+                                } ?: "Memuat Hijriyah"
+                                Text(text = hijriText, fontSize = 13.sp, color = Color.Gray)
                             }
                             
                             IconButton(onClick = { 

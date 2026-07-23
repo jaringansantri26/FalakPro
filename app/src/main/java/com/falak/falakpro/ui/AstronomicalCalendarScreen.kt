@@ -42,22 +42,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.falak.falakpro.location.LocationData
+import com.falak.falakpro.premium.AstroAssetPreloader
 import com.falak.falakpro.premium.CalendarFunctions
-import com.falak.falakpro.premium.ElpDataProvider
-import com.falak.falakpro.premium.Vsop87SolarEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.Locale
-import kotlin.math.round
 import android.widget.NumberPicker
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 
-private val AstroDarkGreenColor = Color(0xFF2E574B)
+private val AstroDarkGreenColor = Color(0xFF00897B)
 private val AstroRed = Color(0xFFD00000)
-private val AstroHeaderGreen = Color(0xFF2E574B)
+private val AstroHeaderGreen = Color(0xFF0B6B35)
 private val AstroGridLine = Color(0xFFCBE7E0)
 private val AstroDim = Color(0xFF9CA3AF)
 private val AstroOrange = Color(0xFFD97706)
@@ -168,10 +166,6 @@ fun AstronomicalCalendarScreen(
     val month = calendar.get(Calendar.MONTH)
     val tz = 7.0
 
-    val snappedLat = remember(locationData.latitude) { round(locationData.latitude * 10.0) / 10.0 }
-    val snappedLon = remember(locationData.longitude) { round(locationData.longitude * 10.0) / 10.0 }
-    val snappedElev = remember(locationData.altitude) { round(locationData.altitude / 10.0) * 10.0 }
-
     val selectedBaseYear = selectedDate.get(Calendar.YEAR)
     val selectedBaseMonth = selectedDate.get(Calendar.MONTH)
     val selectedBaseDay = selectedDate.get(Calendar.DAY_OF_MONTH)
@@ -179,19 +173,10 @@ fun AstronomicalCalendarScreen(
     val calendarModel by produceState<AstroCalendarModel>(
         initialValue = AstroCalendarModel(emptyList(), emptyMap()),
         year, month, selectedBaseYear, selectedBaseMonth, selectedBaseDay,
-        mainCalendarSystem, snappedLat, snappedLon, snappedElev, hijriCriteria
+        mainCalendarSystem, hijriCriteria
     ) {
         value = withContext(Dispatchers.Default) {
-            try {
-                if (!ElpDataProvider.isInitialized) {
-                    context.assets.open("mpp02_core.bin").use { ElpDataProvider.initialize(it) }
-                }
-                if (!Vsop87SolarEngine.isInitialized) {
-                    context.assets.open("earth_vsop87d.bin").use { Vsop87SolarEngine.initialize(it) }
-                }
-            } catch (_: Exception) {
-                // Fallback tetap tersedia kalau asset astronomis belum siap.
-            }
+            AstroAssetPreloader.ensureCore(context)
 
             fun keyOf(y: Int, m0: Int, d: Int): String = "$y-${m0 + 1}-$d"
 
@@ -232,8 +217,8 @@ fun AstronomicalCalendarScreen(
                     hy--
                 }
 
-                val startJde = CalendarFunctions.getStartJdeOfHijriMonth(
-                    hy, hm, snappedLat, snappedLon, snappedElev, tz, hijriCriteria
+                val startJde = CalendarFunctions.getStartJdeOfIndonesianHijriMonth(
+                    hy, hm, hijriCriteria
                 )
 
                 anchors.add(Triple(hy, hm, 1) to startJde)
@@ -251,19 +236,14 @@ fun AstronomicalCalendarScreen(
                 var hM = 0
                 var hD = 0
 
-                for (i in anchors.indices.reversed()) {
-                    if (jde >= anchors[i].second - 0.5) {
-                        hY = anchors[i].first.first
-                        hM = anchors[i].first.second
-                        hD = (jde - anchors[i].second + 1.5).toInt()
-                        break
-                    }
+                CalendarFunctions.getHijriDateFromMonthAnchors(jde, tz, anchors)?.let {
+                    hY = it.first
+                    hM = it.second
+                    hD = it.third
                 }
 
                 if (hY == 0) {
-                    val fallback = CalendarFunctions.getCorrectedHijri(
-                        jde, snappedLat, snappedLon, snappedElev, tz
-                    )
+                    val fallback = CalendarFunctions.getIndonesianCalendarHijri(jde, hijriCriteria)
                     hY = fallback.first
                     hM = fallback.second
                     hD = fallback.third

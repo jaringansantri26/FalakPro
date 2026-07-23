@@ -1,8 +1,12 @@
 ﻿package com.falak.falakpro.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.falak.falakpro.premium.*
+import com.falak.falakpro.premium.EclipseDetail
+import com.falak.falakpro.premium.GerhanaCalculationService
+import com.falak.falakpro.premium.LocalEclipseDetail
+import com.falak.falakpro.premium.LunarEclipseDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -14,8 +18,8 @@ class GerhanaDetailViewModel : ViewModel() {
     val lunarDetail = MutableStateFlow<LunarEclipseDetail?>(null)
 
     fun calculate(
-        jdeApprox: Double, 
-        context: android.content.Context, 
+        jdeApprox: Double,
+        context: Context,
         isSolar: Boolean,
         typology: String = "Global",
         lat: Double = 0.0,
@@ -27,28 +31,20 @@ class GerhanaDetailViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.Default) {
             isLoading.value = true
             try {
-                context.assets.open("mpp02_core.bin").use { ElpDataProvider.initialize(it) }
-                context.assets.open("earth_vsop87d.bin").use { Vsop87SolarEngine.initialize(it) }
-
-                val parityEngine = EclipseParityEngine()
-                
-                if (isSolar) {
-                    val deltaTGlobal = DynamicalTimeEngine.deltaT2(jdeApprox)
-                    solarDetail.value = parityEngine.calculateFullDetail(jdeApprox, deltaTGlobal, timezone)
-                    localSolarDetail.value = if (typology == "Lokal") {
-                        val deltaTLocal = DynamicalTimeEngine.deltaT(jdeApprox)
-                        parityEngine.calculateLocalDetail(jdeApprox, deltaTLocal, lat, lon, elev, timezone, locName)
-                    } else {
-                        null
-                    }
-                    
-                    lunarDetail.value = null
-                } else {
-                    val deltaT = DynamicalTimeEngine.deltaT(jdeApprox)
-                    lunarDetail.value = parityEngine.calculateLunarDetail(jdeApprox, deltaT, timezone)
-                    solarDetail.value = null
-                    localSolarDetail.value = null
-                }
+                val result = GerhanaCalculationService.detail(
+                    jdeApprox = jdeApprox,
+                    context = context,
+                    isSolar = isSolar,
+                    typology = typology,
+                    lat = lat,
+                    lon = lon,
+                    elev = elev,
+                    timezone = timezone,
+                    locName = locName
+                )
+                solarDetail.value = result.solarDetail
+                localSolarDetail.value = result.localSolarDetail
+                lunarDetail.value = result.lunarDetail
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -57,4 +53,3 @@ class GerhanaDetailViewModel : ViewModel() {
         }
     }
 }
-

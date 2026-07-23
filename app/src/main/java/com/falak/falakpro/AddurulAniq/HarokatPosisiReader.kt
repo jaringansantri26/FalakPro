@@ -3,19 +3,17 @@ package com.falak.falakpro.AddurulAniq
 import android.content.Context
 import java.io.BufferedInputStream
 import java.io.DataInputStream
-import java.lang.Double
-import java.lang.Long
+import java.nio.charset.Charset
 
 class HarokatPosisiReader(private val context: Context) {
     fun read(): List<PosisiSheet> {
         val sheets = mutableListOf<PosisiSheet>()
-        val inputStream = context.assets.open("harokat_posisi.bin")
-        val input = DataInputStream(BufferedInputStream(inputStream))
 
-        try {
+        context.assets.open("harokat_posisi.bin").use { inputStream ->
+            val input = DataInputStream(BufferedInputStream(inputStream))
             val headerBytes = ByteArray(7)
             input.readFully(headerBytes)
-            val header = String(headerBytes)
+            val header = String(headerBytes, Charset.defaultCharset())
             if (header != "HAROKAT") return emptyList()
 
             val totalSheets = Integer.reverseBytes(input.readInt())
@@ -24,7 +22,7 @@ class HarokatPosisiReader(private val context: Context) {
                 val nameLen = input.readUnsignedByte()
                 val nameBytes = ByteArray(nameLen)
                 input.readFully(nameBytes)
-                val sheetName = String(nameBytes)
+                val sheetName = String(nameBytes, Charset.defaultCharset())
 
                 val sheetType = input.readUnsignedByte().toInt()
                 val totalRow = Integer.reverseBytes(input.readInt())
@@ -40,8 +38,8 @@ class HarokatPosisiReader(private val context: Context) {
                         
                         val values = DoubleArray(10) // SESUAI KODE BAPAK (10 DESIMAL)
                         for (i in 0 until 10) {
-                            values[i] = Double.longBitsToDouble(
-                                Long.reverseBytes(input.readLong())
+                            values[i] = java.lang.Double.longBitsToDouble(
+                                java.lang.Long.reverseBytes(input.readLong())
                             )
                         }
                         // Kita simpan p (Pasaran) di values[0] jika dia ada di kolom ke-4 (setelah h)
@@ -50,8 +48,8 @@ class HarokatPosisiReader(private val context: Context) {
                         val waktu = Integer.reverseBytes(input.readInt())
                         val values = DoubleArray(7) // SESUAI KODE BAPAK (7 DESIMAL)
                         for (i in 0 until 7) {
-                            values[i] = Double.longBitsToDouble(
-                                Long.reverseBytes(input.readLong())
+                            values[i] = java.lang.Double.longBitsToDouble(
+                                java.lang.Long.reverseBytes(input.readLong())
                             )
                         }
                         timeRows.add(TimeRow(waktu, values))
@@ -59,8 +57,6 @@ class HarokatPosisiReader(private val context: Context) {
                 }
                 sheets.add(PosisiSheet(sheetName, sheetType, mainRows, timeRows))
             }
-        } finally {
-            input.close()
         }
         return sheets
     }

@@ -57,9 +57,8 @@ object SolarFunctions {
     /** Greenwich Apparent Sidereal Time (derajat) */
     fun greenwichApparentSiderealTime(jde: Double): Double {
         val gmst = greenwichMeanSiderealTime(jde)
-        val nutEngine = Nutation()
-        val nutation = nutEngine.nutationInLongitude(jde)
-        val epsilon = nutEngine.trueObliquityOfEcliptic(jde)
+        val nutation = AstroDataUtils.calculateNutation(jde).first
+        val epsilon = AstroDataUtils.calculateTrueObliquity(jde)
         return (gmst + nutation * cos(Math.toRadians(epsilon))).mod(360.0)
     }
 
@@ -71,7 +70,7 @@ object SolarFunctions {
         val L0 = (280.46607 + 36000.76908 * T).mod(360.0)
         val M = (357.52911 + 35999.05029 * T).mod(360.0)
         val e = 0.016708634 - 0.000042037 * T
-        val epsilon = Nutation().meanObliquityOfEcliptic(jde)
+        val epsilon = Iau2006Nutation.meanObliquityDeg(jde)
         val y = tan(Math.toRadians(epsilon / 2.0)).pow(2)
         
         val eot = y * sin(2 * Math.toRadians(L0)) - 
@@ -98,11 +97,11 @@ object SolarFunctions {
                        ra1: Double, dec1: Double,
                        ra2: Double, dec2: Double,
                        ra3: Double, dec3: Double): RiseTransitSet {
-        // PERSIS Exact Horizon Calculation (SunDatas.kt)
-        val sdS = 16.0 / 60.0 // Approximate semi-diameter
-        val rfS = 34.16 / 60.0 // Standard refraction
-        val dip = 2.1 * sqrt(elev) / 60.0 // Dip of horizon based on elevation
-        val h0 = 0.0 - sdS - rfS - dip + 0.0024 // Geometrical horizon at given elevation
+        // AA Ch. 15: standard altitude for apparent upper-limb setting.
+        val sdS = 16.0 / 60.0
+        val rfS = AstroTransform.AA_HORIZON_REFRACTION_DEG
+        val dip = abs(AstroTransform.dipCorrection(elev))
+        val h0 = 0.0 - sdS - rfS - dip
         
         val cosH0 = (sin(Math.toRadians(h0)) - sin(Math.toRadians(lat)) * sin(Math.toRadians(dec2))) /
                 (cos(Math.toRadians(lat)) * cos(Math.toRadians(dec2)))
@@ -162,7 +161,7 @@ object SolarFunctions {
 
     fun refractionBennett(altGeometric: Double): Double {
         if (altGeometric < -1.0) return 0.0
-        return (1.0 / tan(Math.toRadians(altGeometric + 7.31 / (altGeometric + 4.4)))) / 60.0
+        return AstroTransform.atmosphericRefraction(altGeometric)
     }
 
     fun refractionSaemundsson(altApparent: Double): Double {
@@ -172,7 +171,7 @@ object SolarFunctions {
 
     fun refractionWithAtmosphere(altGeometric: Double, tempC: Double = 10.0, pressureMbar: Double = 1010.0): Double {
         val f = pressureMbar / 1010.0 * 283.0 / (273.0 + tempC)
-        return refractionBennett(altGeometric) * f
+        return AstroTransform.atmosphericRefraction(altGeometric) * f
     }
 
     // ── Twilight ──────────────────────────────────────────────────────────────
@@ -237,7 +236,7 @@ object SolarFunctions {
 
     // ── Meeus Ch. 40: Solar Parallax ──────────────────────────────────────────
 
-    fun solarEquatorialHorizontalParallax(distAU: Double): Double = Math.toDegrees(asin(6378.14 / (distAU * 149597870.7)))
+    fun solarEquatorialHorizontalParallax(distAU: Double): Double = AstroTransform.solarParallax(distAU)
 
     fun solarTransit(jde0: Double, lon: Double): Double {
         val eot = equationOfTime(jde0) / 60.0

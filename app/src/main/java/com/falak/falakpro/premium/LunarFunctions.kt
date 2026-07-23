@@ -149,7 +149,7 @@ object LunarFunctions {
             1.927 * cos(6*D)      - 1.263 * cos(8*D)     - 0.702 * cos(10*D)  + 1.188 * cos(M) +
             0.673 * cos(4*D+M)    + 0.027 * cos(8*D+M)  + 0.187 * cos(2*D+M)) / 3600.0
 
-        val dist = 6378.14 / sin(Math.toRadians(parallax))
+        val dist = AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_KM / sin(Math.toRadians(parallax))
         return PerigeeApogee(JDE + cor, dist, parallax)
     }
 
@@ -176,7 +176,7 @@ object LunarFunctions {
         val parallax = (3245.251 - 9.147 * cos(2*D) - 0.841 * cos(M) +
                 0.697 * cos(2*F) - 0.656 * cos(4*D) + 0.355 * cos(4*D-M)) / 3600.0
 
-        val dist = 6378.14 / sin(Math.toRadians(parallax))
+        val dist = AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_KM / sin(Math.toRadians(parallax))
         return PerigeeApogee(JDE + cor, dist, parallax)
     }
 

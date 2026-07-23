@@ -80,18 +80,11 @@ object MesinWaktuShalat {
         }
     }
 
-    private fun inisialisasiVsop(konteks: android.content.Context?) {
-        try {
-            konteks?.assets?.open("earth_vsop87d.bin")?.use { 
-                Vsop87SolarEngine.initialize(it) 
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+    private fun prepareSolarData(konteks: android.content.Context?) {
+        AstroAssetPreloader.ensureSolarBlocking(konteks)
     }
 
-    private fun cariTransit(konteks: android.content.Context?, jd0: Double, bujur: Double): Double {
-        inisialisasiVsop(konteks)
+    private fun cariTransit(jd0: Double, bujur: Double): Double {
         var m = 0.5 - bujur / 360.0
         for (i in 0..2) {
             val jd = jd0 + m
@@ -107,14 +100,12 @@ object MesinWaktuShalat {
     }
 
     private fun cariKetinggian(
-        konteks: android.content.Context?,
         transitJd: Double,
         ketinggianSasaran: Double,
         lintang: Double,
         bujur: Double,
         apakahTerbit: Boolean
     ): Double? {
-        inisialisasiVsop(konteks)
         val jdeT = transitJd + DynamicalTimeEngine.deltaT(transitJd) / 86400.0
         val noonSun = Vsop87SolarEngine.compute(jdeT)
         
@@ -153,20 +144,18 @@ object MesinWaktuShalat {
     }
 
     private fun cariAshar(
-        konteks: android.content.Context?,
         transitJd: Double,
         lintang: Double,
         bujur: Double,
         faktor: Double
     ): Double? {
-        inisialisasiVsop(konteks)
         val jde = transitJd + DynamicalTimeEngine.deltaT(transitJd) / 86400.0
         val noonSun = Vsop87SolarEngine.compute(jde)
         val noonAlt = 90.0 - abs(lintang - noonSun.dec)
         val targetCot = faktor + 1.0 / tan(Math.toRadians(noonAlt))
         val targetAlt = Math.toDegrees(atan(1.0 / targetCot))
         
-        return cariKetinggian(konteks, transitJd, targetAlt, lintang, bujur, apakahTerbit = false)
+        return cariKetinggian(transitJd, targetAlt, lintang, bujur, apakahTerbit = false)
     }
 
     fun hitung(
@@ -175,7 +164,6 @@ object MesinWaktuShalat {
         lintang: Double, bujur: Double, elevasi: Double,
         zonaWaktu: Double,
         kriteria: KriteriaWaktuShalat,
-        ikhImsak: Int = 2,
         ikhSubuh: Int = 2,
         ikhTerbit: Int = 2,
         ikhDhuha: Int = 2,
@@ -188,29 +176,32 @@ object MesinWaktuShalat {
         faktorAshar: Double = 1.0,
         is24HourFormat: Boolean = true
     ): List<HasilWaktuShalat> {
+        prepareSolarData(konteks)
+
         val jd0 = PenolongJulian.dariKalender(tahun, bulan, hari.toDouble())
-        val transitJd = cariTransit(konteks, jd0, bujur)
+        val transitJd = cariTransit(jd0, bujur)
         
         // Subuh
-        val fajrJd = cariKetinggian(konteks, transitJd, kriteria.sudutSubuh, lintang, bujur, apakahTerbit = true)
+        val fajrJd = cariKetinggian(transitJd, kriteria.sudutSubuh, lintang, bujur, apakahTerbit = true)
         
         // Terbit (Syuruk)
         // Dip matahari & Refraksi
-        val dip = if (gunakanElevasi) -0.0293 * sqrt(elevasi) else 0.0
+        val dip = if (gunakanElevasi) AstroTransform.dipCorrection(elevasi) else 0.0
         val targetAltTerbit = -0.8333 + dip
-        val syurukJd = cariKetinggian(konteks, transitJd, targetAltTerbit, lintang, bujur, apakahTerbit = true)
+        val syurukJd = cariKetinggian(transitJd, targetAltTerbit, lintang, bujur, apakahTerbit = true)
         
         // Dhuha
-        val dhuhaJd = cariKetinggian(konteks, transitJd, kriteria.sudutDhuha, lintang, bujur, apakahTerbit = true)
+        val dhuhaJd = cariKetinggian(transitJd, kriteria.sudutDhuha, lintang, bujur, apakahTerbit = true)
         
         // Ashar
-        val asrJd = cariAshar(konteks, transitJd, lintang, bujur, faktorAshar)
+        val asrJd = cariAshar(transitJd, lintang, bujur, faktorAshar)
         
         // Maghrib
-        val maghribJd = cariKetinggian(konteks, transitJd, targetAltTerbit, lintang, bujur, apakahTerbit = false)
+        val maghribJd = cariKetinggian(transitJd, targetAltTerbit, lintang, bujur, apakahTerbit = false)
         
         // Isya
-        val ishaJd = if (kriteria.nama == "Umm Al-Qura") {
+        val isUmmAlQura = kriteria.nama.contains("Umm al-Qura", ignoreCase = true)
+        val ishaJd = if (isUmmAlQura) {
             // 90 menit setelah Maghrib, atau 120 menit saat Ramadhan
             if (maghribJd != null) {
                 val hijri = CalendarFunctions.jdeToHijri(maghribJd)
@@ -218,11 +209,11 @@ object MesinWaktuShalat {
                 maghribJd + (menit / 60.0) / 24.0
             } else null
         } else {
-            cariKetinggian(konteks, transitJd, kriteria.sudutIsya, lintang, bujur, apakahTerbit = false)
+            cariKetinggian(transitJd, kriteria.sudutIsya, lintang, bujur, apakahTerbit = false)
         }
         
-        // Imsak: 10 menit sebelum Subuh
-        val imsakJd = if (fajrJd != null) fajrJd - (10.0 / 60.0) / 24.0 else null
+        // Imsak mengikuti waktu Subuh final: Subuh setelah ikhtiyat dikurangi 10 menit.
+        val imsakJd = if (fajrJd != null) fajrJd + ((ikhSubuh - 10.0) / 60.0) / 24.0 else null
 
         val hasil = mutableListOf<HasilWaktuShalat>()
         
@@ -245,8 +236,8 @@ object MesinWaktuShalat {
             val formattedMurni = String.format(Locale.US, "%02d:%02d:%02d", rawH, rawM, rawS)
 
             val roundedMinutes = if (nama == "Terbit") {
-                // Untuk terbit, detik berapapun diabaikan (floor), tanpa menggunakan ikhtiyat
-                floor(localMinutes)
+                // Terbit menjadi batas akhir Subuh, maka ikhtiyat mengurangi waktu.
+                floor(localMinutes - ikhtiyatMenit)
             } else {
                 // Untuk selain terbit, tambahkan ikhtiyat lalu lakukan pembulatan pada level MENIT
                 val finalMinutes = localMinutes + ikhtiyatMenit
@@ -273,10 +264,10 @@ object MesinWaktuShalat {
             hasil.add(HasilWaktuShalat(nama, formatted, formattedMurni, jd))
         }
 
-        tambahHasil("Imsak", imsakJd, ikhImsak)
+        tambahHasil("Imsak", imsakJd, 0)
         tambahHasil("Subuh", fajrJd, ikhSubuh)
         tambahHasil("Terbit", syurukJd, ikhTerbit)
-        tambahHasil("Dhuha", dhuhaJd, 0)
+        tambahHasil("Dhuha", dhuhaJd, ikhDhuha)
         tambahHasil("Dzuhur", transitJd, ikhDzuhur)
         tambahHasil("Ashar", asrJd, ikhAshar)
         tambahHasil("Maghrib", maghribJd, ikhMaghrib)

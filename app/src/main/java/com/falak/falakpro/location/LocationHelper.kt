@@ -6,10 +6,10 @@ import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import com.google.android.gms.location.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -129,7 +129,7 @@ class LocationHelper(private val context: Context) {
             }
         }
         
-        // Timeout after 3 seconds for FusedLocationProvider, fallback to direct LocationManager or IP
+        // Timeout after 3 seconds for FusedLocationProvider, fallback to direct LocationManager or IP.
         handler.postDelayed(timeoutRunnable, 3000)
 
         try {
@@ -208,7 +208,6 @@ class LocationHelper(private val context: Context) {
             if (!isCompleted) {
                 isCompleted = true
                 locationManager.removeUpdates(listener)
-                // Final fallback to IP
                 onComplete(false)
             }
         }
@@ -259,7 +258,7 @@ class LocationHelper(private val context: Context) {
                 conn.connectTimeout = 4000
                 conn.readTimeout = 4000
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-                
+
                 if (conn.responseCode == 200) {
                     val reader = BufferedReader(InputStreamReader(conn.inputStream))
                     val response = StringBuilder()
@@ -268,13 +267,13 @@ class LocationHelper(private val context: Context) {
                         response.append(line)
                     }
                     reader.close()
-                    
+
                     val json = JSONObject(response.toString())
                     val lat: Double
                     val lon: Double
                     val city: String
                     val region: String
-                    
+
                     when (type) {
                         "freeipapi" -> {
                             lat = json.getDouble("latitude")
@@ -293,14 +292,14 @@ class LocationHelper(private val context: Context) {
                                 return@withContext false
                             }
                         }
-                        else -> { // ipapico
+                        else -> {
                             lat = json.getDouble("latitude")
                             lon = json.getDouble("longitude")
                             city = json.optString("city", "Lokasi Terdeteksi")
                             region = json.optString("region", "")
                         }
                     }
-                    
+
                     val addressName = if (region.isNotEmpty()) "$city, $region" else city
                     withContext(Dispatchers.Main) {
                         _locationState.value = LocationData(
@@ -338,10 +337,10 @@ class LocationHelper(private val context: Context) {
                 
                 if (subLocality.isNotEmpty()) "$subLocality, $cleanLocality" else cleanLocality
             } else {
-                "Lokasi GPS Aktif"
+                formatOfflineCoordinateName(location)
             }
         } catch (e: Exception) {
-            "Lokasi GPS/Jaringan Aktif"
+            formatOfflineCoordinateName(location)
         }
 
         _locationState.value = LocationData(
@@ -349,6 +348,15 @@ class LocationHelper(private val context: Context) {
             longitude = location.longitude,
             altitude = location.altitude,
             address = addressName
+        )
+    }
+
+    private fun formatOfflineCoordinateName(location: Location): String {
+        return String.format(
+            Locale.US,
+            "GPS %.5f, %.5f",
+            location.latitude,
+            location.longitude
         )
     }
 }

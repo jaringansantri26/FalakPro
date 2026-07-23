@@ -64,7 +64,7 @@ object ElpMpp02LunarEngine {
         val coords = AstroDataUtils.eclipticToEquatorialApparent(moonAppaLon, moonAppaLat, jdeTD)
         
         // 9. HP and SD (MoonOtherFunc.kt:109, 119)
-        val hpDeg = deg(asin(6378.14 / distKm))
+        val hpDeg = deg(asin(AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_KM / distKm))
         val sdDeg = deg(asin(0.272481 * sin(rad(hpDeg))))
 
         return LunarPosition(
@@ -72,6 +72,47 @@ object ElpMpp02LunarEngine {
             dec = coords.second,
             longitudeEcliptic = moonAppaLon,
             latitudeEcliptic = moonAppaLat,
+            distanceAU = distKm / 149597870.7,
+            horizontalParallax = hpDeg,
+            semidiameter = sdDeg
+        )
+    }
+
+    fun computeTrue(jdeTD: Double): LunarPosition {
+        val t = (jdeTD - 2451545.0) / 36525.0
+        val t2 = t * t
+        val t3 = t * t2
+        val t4 = t * t3
+
+        val lSum = ElpDataProvider.getLongitudeSum(jdeTD)
+        val bSum = ElpDataProvider.getLatitudeSum(jdeTD)
+        val rSum = ElpDataProvider.getDistanceSum(jdeTD)
+
+        val w0 = 3.81034409083088
+        val w1 = 8399.68473007193
+        val w2 = -0.0000331895204255009
+        val w3 = 3.11024944910606E-08
+        val w4 = -2.03282376489228E-10
+        val w = w0 + w1 * t + w2 * t2 + w3 * t3 + w4 * t4
+
+        val p1 = 5029.0966 - 0.29965
+        val p2 = 1.112
+        val p3 = 0.000077
+        val p4 = -0.00002353
+        val p = p1 * t + p2 * t2 + p3 * t3 + p4 * t4
+
+        val lon = AstroMath.mod(deg(w) + lSum / 3600.0 + p / 3600.0, 360.0)
+        val lat = bSum / 3600.0
+        val distKm = rSum
+        val coords = AstroDataUtils.eclipticToEquatorial(lon, lat, jdeTD)
+        val hpDeg = deg(asin(AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_KM / distKm))
+        val sdDeg = deg(asin(0.272481 * sin(rad(hpDeg))))
+
+        return LunarPosition(
+            ra = coords.first,
+            dec = coords.second,
+            longitudeEcliptic = lon,
+            latitudeEcliptic = lat,
             distanceAU = distKm / 149597870.7,
             horizontalParallax = hpDeg,
             semidiameter = sdDeg

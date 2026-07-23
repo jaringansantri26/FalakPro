@@ -59,6 +59,19 @@ data class ThulSyamsResult(
     val jarakDetails: List<TadilDetail> = emptyList()
 )
 
+data class AddurulProcessKeys(
+    val majmuah: Int,
+    val mabsuthoh: Int,
+    val bulan: Int,
+    val hari: Int,
+    val jamGhurub: Int,
+    val menitGhurub: Int,
+    val detikGhurub: Int,
+    val sftJam: Int,
+    val sftMenit: Int,
+    val sftDetik: Int
+)
+
 data class IjtimaResult(
     val targetMonth: Int,
     val targetYear: Int,
@@ -110,7 +123,8 @@ data class IjtimaResult(
     val jarakBumiBulanTadil: List<TadilDetail> = emptyList(),
 
     val matahari: ThulSyamsResult,
-    val ghrbWdHaqiqi: Double
+    val ghrbWdHaqiqi: Double,
+    val processKeys: AddurulProcessKeys? = null
 )
 
 class AddurulAniqEngine(private val context: Context) {
@@ -125,6 +139,9 @@ class AddurulAniqEngine(private val context: Context) {
         if (res < 0) res += 360.0
         return res
     }
+
+    private fun clampTrig(value: Double): Double =
+        value.coerceIn(-1.0, 1.0)
 
     private fun interpolateTadil(key: Double, selector: (TadilRecord) -> Double): Double {
         val absKey = abs(key)
@@ -308,9 +325,12 @@ class AddurulAniqEngine(private val context: Context) {
         val gInitial = hitungGhurubLMT(gDaySunset, gMonthSunset, mBase, lat, lon, tinggi)
         
         val gAbs = abs(gInitial.ghrbLmt)
-        val rJamG = posisiDb.getJam(floor(gAbs).toInt())?.toPosisiRow("JAM GHRB") ?: PosisiRow("JAM GHRB")
-        val rMenG = posisiDb.getMenit(floor((gAbs - floor(gAbs)) * 60).toInt())?.toPosisiRow("Menit GHRB") ?: PosisiRow("Menit GHRB")
-        val rDetG = posisiDb.getDetik(round(((gAbs - floor(gAbs)) * 60 - floor((gAbs - floor(gAbs)) * 60)) * 60).toInt())?.toPosisiRow("Detik GHRB") ?: PosisiRow("Detik GHRB")
+        val jamGhurubKey = floor(gAbs).toInt()
+        val menitGhurubKey = floor((gAbs - floor(gAbs)) * 60).toInt()
+        val detikGhurubKey = round(((gAbs - floor(gAbs)) * 60 - floor((gAbs - floor(gAbs)) * 60)) * 60).toInt()
+        val rJamG = posisiDb.getJam(jamGhurubKey)?.toPosisiRow("JAM GHRB") ?: PosisiRow("JAM GHRB")
+        val rMenG = posisiDb.getMenit(menitGhurubKey)?.toPosisiRow("Menit GHRB") ?: PosisiRow("Menit GHRB")
+        val rDetG = posisiDb.getDetik(detikGhurubKey)?.toPosisiRow("Detik GHRB") ?: PosisiRow("Detik GHRB")
         
         val jumlah1 = sumPosisiRows("JUMLAH 1", rMajP, rMabP, rBulP, rHarP, rJamG, rMenG, rDetG)
         
@@ -364,7 +384,7 @@ class AddurulAniqEngine(private val context: Context) {
         val dmRad = Math.toRadians(dm)
         val hmSunRad = Math.toRadians(hmSun)
         val cosGM = (sin(hmSunRad) - sin(latRad) * sin(dmRad)) / (cos(latRad) * cos(dmRad))
-        val gmDeg = Math.toDegrees(acos(cosGM))
+        val gmDeg = Math.toDegrees(acos(clampTrig(cosGM)))
         
         // 10. Sunset WD
         val ghrbWdHaqiqi = gmDeg / 15.0 + 12.0 - eotHaqiqi + ((timezone * 15.0) - lon) / 15.0
@@ -419,14 +439,14 @@ class AddurulAniqEngine(private val context: Context) {
         val bRad = Math.toRadians(bResult)
         val oRad = Math.toRadians(jumlah2.O_mail)
         val moRadForDc = Math.toRadians(moResult)
-        val dcRad = asin(sin(bRad) * cos(oRad) + cos(bRad) * sin(oRad) * sin(moRadForDc))
+        val dcRad = asin(clampTrig(sin(bRad) * cos(oRad) + cos(bRad) * sin(oRad) * sin(moRadForDc)))
         val dcResult = Math.toDegrees(dcRad)
         
         // 4. Ascensiorekta Bulan (ac)
         val cosMo = cos(moRadForDc)
         val cosB = cos(bRad)
         val cosDc = cos(dcRad)
-        var acResult = Math.toDegrees(acos(cosMo * cosB / cosDc))
+        var acResult = Math.toDegrees(acos(clampTrig(cosMo * cosB / cosDc)))
         if (moResult > 180.0) acResult = 360.0 - acResult
         
         // 5. Jarak Bumi-Bulan (r)
@@ -439,7 +459,7 @@ class AddurulAniqEngine(private val context: Context) {
         val distMoon = 385000.56 + jarakBulanTadilList.sumOf { it.tadil }
         
         // 6. Horizontal Parallax (Hp)
-        val hpMoon = Math.toDegrees(asin(6378.14 / distMoon))
+        val hpMoon = Math.toDegrees(asin(clampTrig(6378.14 / distMoon)))
         
         // 7. Semidiameter Bulan (sdc)
         val sdcMoon = 0.272476 * hpMoon
@@ -450,7 +470,7 @@ class AddurulAniqEngine(private val context: Context) {
         // 9. Altitude Bulan Geocentric (hc)
         val phiRad = Math.toRadians(lat)
         val gcRad = Math.toRadians(gcMoon)
-        val hcMarkaziRad = asin(sin(phiRad) * sin(dcRad) + cos(phiRad) * cos(dcRad) * cos(gcRad))
+        val hcMarkaziRad = asin(clampTrig(sin(phiRad) * sin(dcRad) + cos(phiRad) * cos(dcRad) * cos(gcRad)))
         val hcMarkazi = Math.toDegrees(hcMarkaziRad)
         
         // 10. Azimut Bulan (azc)
@@ -472,11 +492,11 @@ class AddurulAniqEngine(private val context: Context) {
         val t69 = moResult
         val t35 = matahari.sPrimeHaqiqi
         val t77 = bResult
-        val eloMarkazi = Math.toDegrees(acos(cos(Math.toRadians(t69 - t35)) * cos(Math.toRadians(t77))))
+        val eloMarkazi = Math.toDegrees(acos(clampTrig(cos(Math.toRadians(t69 - t35)) * cos(Math.toRadians(t77)))))
         
         val hcSathiRad = Math.toRadians(hcSathi)
         val zRad = Math.toRadians(bedaAzm)
-        val eloSathi = Math.toDegrees(acos(sin(hcSathiRad) * sin(hmSunRad) + cos(hcSathiRad) * cos(hmSunRad) * cos(zRad)))
+        val eloSathi = Math.toDegrees(acos(clampTrig(sin(hcSathiRad) * sin(hmSunRad) + cos(hcSathiRad) * cos(hmSunRad) * cos(zRad))))
         
         // sudut i (Phase Angle)
         val iAngle = 180.0 - eloMarkazi - 0.1468 * (1.0 - 0.0549 * sin(Math.toRadians(jumlah2.A_khosso)) / (1.0 - 0.0167 * sin(Math.toRadians(jumlah2.m_khosso)))) * sin(Math.toRadians(eloMarkazi))
@@ -493,7 +513,7 @@ class AddurulAniqEngine(private val context: Context) {
         
         // 19. Beda Jarak Sudut (C)
         val yRad = Math.toRadians(bedaTinggi)
-        val buduZawiyah = Math.toDegrees(acos(cos(zRad) * cos(yRad)))
+        val buduZawiyah = Math.toDegrees(acos(clampTrig(cos(zRad) * cos(yRad))))
         
         // 20. Ghurubul Hilal (GH)
         val ghurubHilal = ghrbWdHaqiqi + (muktsulHilal / 60.0)
@@ -556,7 +576,19 @@ class AddurulAniqEngine(private val context: Context) {
             ardhQomarTadil = ardhQomarTadilList,
             jarakBumiBulanTadil = jarakBulanTadilList,
             matahari = matahari,
-            ghrbWdHaqiqi = ghrbWdHaqiqi
+            ghrbWdHaqiqi = ghrbWdHaqiqi,
+            processKeys = AddurulProcessKeys(
+                majmuah = keyMajmuah,
+                mabsuthoh = keyMabsuthoh,
+                bulan = keyBulan,
+                hari = trialDay,
+                jamGhurub = jamGhurubKey,
+                menitGhurub = menitGhurubKey,
+                detikGhurub = detikGhurubKey,
+                sftJam = sftH,
+                sftMenit = sftM,
+                sftDetik = sftS
+            )
         )
     }
 
@@ -599,7 +631,7 @@ class AddurulAniqEngine(private val context: Context) {
         val decRad = Math.toRadians(deklinasi)
         val hRad = Math.toRadians(h)
         val cosH = (sin(hRad) - sin(latRad) * sin(decRad)) / (cos(latRad) * cos(decRad))
-        val hourAngle = Math.toDegrees(acos(cosH)) / 15.0
+        val hourAngle = Math.toDegrees(acos(clampTrig(cosH))) / 15.0
         val ghrbLmt = hourAngle + 12.0 - eqTime
         return GhurubResult(m, sd, dip, h, deklinasi, eqTime, ghrbLmt)
     }

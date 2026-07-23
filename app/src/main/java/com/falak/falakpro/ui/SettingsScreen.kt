@@ -1,5 +1,6 @@
-﻿package com.falak.falakpro.ui
+package com.falak.falakpro.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -8,71 +9,67 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
+import android.widget.Toast
 import com.falak.falakpro.R
 import com.falak.falakpro.premium.PreferencesHelper
+import com.falak.falakpro.ui.components.FalakCard
+import com.falak.falakpro.ui.components.FalakHeaderBar
+import com.falak.falakpro.ui.components.FalakSectionHeader
+import com.falak.falakpro.ui.theme.GreenPrimary
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     prefs: PreferencesHelper,
     onThemeChanged: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onCheckUpdate: suspend () -> Boolean
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
     // Read initial states
     var appTheme by remember { mutableIntStateOf(prefs.appTheme) } // 0=System, 1=Light, 2=Dark
     var use24HourFormat by remember { mutableStateOf(prefs.is24HourFormat) }
     var showNotifications by remember { mutableStateOf(true) }
     var selectedLanguage by remember { mutableStateOf(prefs.appLanguage) }
+    var isCheckingUpdate by remember { mutableStateOf(false) }
     
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { padding ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        FalakHeaderBar(
+            title = stringResource(R.string.settings_title),
+            onBack = onNavigateBack
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Appearance Settings
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
+            FalakCard {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_appearance),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    FalakSectionHeader(title = stringResource(R.string.settings_appearance))
                     
                     Text(stringResource(R.string.settings_theme), fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.settings_theme_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -108,19 +105,11 @@ fun SettingsScreen(
             }
             
             // Notification Settings
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
+            FalakCard {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "Notifikasi",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    FalakSectionHeader(title = "Notifikasi")
                     
                     SwitchSetting(
                         title = "Notifikasi Shalat",
@@ -132,19 +121,11 @@ fun SettingsScreen(
             }
             
             // Language Settings
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
+            FalakCard {
                 Column(
-                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.settings_language),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    FalakSectionHeader(title = stringResource(R.string.settings_language))
                     Text(stringResource(R.string.settings_language_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     
                     val languages = listOf(
@@ -169,13 +150,72 @@ fun SettingsScreen(
                 }
             }
             
+            // App Update (Google Play Store)
+            FalakCard {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FalakSectionHeader(title = "Update Aplikasi")
+                    
+                    val currentVer = remember {
+                        runCatching {
+                            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                            packageInfo.versionName ?: "1.0.0"
+                        }.getOrDefault("1.0.0")
+                    }
+
+                    Text(
+                        text = "Versi saat ini: v$currentVer\nAplikasi diperbarui secara resmi melalui Google Play Store.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (isCheckingUpdate) return@Button
+                                isCheckingUpdate = true
+                                coroutineScope.launch {
+                                    val updateAvailable = runCatching { onCheckUpdate() }.getOrDefault(false)
+                                    if (!updateAvailable) {
+                                        Toast.makeText(
+                                            context,
+                                            "Tidak ada update baru. Anda menggunakan versi terbaru (v$currentVer).",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                    isCheckingUpdate = false
+                                }
+                            },
+                            enabled = !isCheckingUpdate,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isCheckingUpdate) "Mengecek..." else "Cek Update", fontSize = 13.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                com.falak.falakpro.AppUpdateChecker.openPlayStore(context)
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Buka Play Store", fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+
             // About Section
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            FalakCard(
+                borderColor = GreenPrimary.copy(alpha = 0.35f),
+                backgroundColor = GreenPrimary.copy(alpha = 0.05f)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val titleText = when (selectedLanguage) {
@@ -188,18 +228,19 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Info, contentDescription = null, tint = GreenPrimary)
                         Text(
                             text = titleText,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = GreenPrimary
                         )
                     }
                     
                     Text(
                         text = getAboutText(selectedLanguage),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

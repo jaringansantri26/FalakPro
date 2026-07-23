@@ -28,11 +28,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -47,9 +49,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.falak.falakpro.location.LocationHelper
 import com.falak.falakpro.premium.PreferencesHelper
-import com.falak.falakpro.premium.SolarFunctions
-import com.falak.falakpro.premium.PrayerTimeFunctions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.*
 import kotlin.math.*
 
@@ -64,19 +66,46 @@ private fun formatDms(deg: Double?): String {
     return String.format(Locale.US, "%s%d° %02d' %02d\"", sign, d, m, s.toInt())
 }
 
+private fun formatDecimalHourHms(hour: Double): String {
+    val normalized = ((hour % 24.0) + 24.0) % 24.0
+    val h = floor(normalized).toInt()
+    val minuteFloat = (normalized - h) * 60.0
+    val m = floor(minuteFloat).toInt()
+    val s = round((minuteFloat - m) * 60.0).toInt()
+    return String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
+}
+
+private data class QiblaDateKey(val year: Int, val month: Int, val day: Int)
+
+private fun currentQiblaDateKey(): QiblaDateKey {
+    val calendar = Calendar.getInstance()
+    return QiblaDateKey(
+        year = calendar.get(Calendar.YEAR),
+        month = calendar.get(Calendar.MONTH) + 1,
+        day = calendar.get(Calendar.DAY_OF_MONTH)
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KiblatScreen(
     onNavigateBack: () -> Unit,
     onNavigateToKamera: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    showCalibrationOnOpen: Boolean = false,
+    onCalibrationPromptConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember { PreferencesHelper(context) }
+    val showSunMoon by rememberKiblatShowSunMoonState(prefs)
     val locationHelper = remember { LocationHelper(context) }
     val locationState by locationHelper.locationState.collectAsState()
     
     var lokasiOtomatisState by remember { mutableStateOf(prefs.lokasiOtomatis) }
+    var locationInputMode by remember { mutableStateOf(prefs.locationInputMode) }
+    var locationRevision by remember { mutableIntStateOf(0) }
+    var showLocationChoiceSheet by remember { mutableStateOf(false) }
+    var showCityPickerDialog by remember { mutableStateOf(false) }
     
     // States for Manual Location Input
     var locName by remember { mutableStateOf(prefs.manualLokasiNama) }
@@ -126,23 +155,36 @@ fun KiblatScreen(
         prefs.manualLon = decimal
     }
 
-    val lat = if (lokasiOtomatisState) {
+    val useGpsLocation = locationInputMode == "GPS"
+    val savedManualLat = remember(locationRevision) { prefs.manualLat }
+    val savedManualLon = remember(locationRevision) { prefs.manualLon }
+    val savedManualTimezone = remember(locationRevision) { prefs.manualTimezone }
+    val savedManualLocationName = remember(locationRevision) { prefs.manualLokasiNama }
+    val lat = if (useGpsLocation) {
         if (locationState.latitude != 0.0) locationState.latitude else -6.3133
     } else {
-        prefs.manualLat
+        savedManualLat
     }
     
-    val lon = if (lokasiOtomatisState) {
+    val lon = if (useGpsLocation) {
         if (locationState.longitude != 0.0) locationState.longitude else 107.3191
     } else {
-        prefs.manualLon
+        savedManualLon
     }
     
-    val tzOffset = 7.0 // default WIB
+    val tzOffset = if (useGpsLocation) timezoneFromLongitude(lon) else savedManualTimezone
     
     var showSettings by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showInfoDialog by remember { mutableStateOf(false) }
+    var showCalibrationDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showCalibrationOnOpen) {
+        if (showCalibrationOnOpen) {
+            showCalibrationDialog = true
+            onCalibrationPromptConsumed()
+        }
+    }
     
     val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val textMeasurer = rememberTextMeasurer()
@@ -183,13 +225,59 @@ fun KiblatScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val granted = permissions.values.all { it }
-        if (granted) {
-            locationHelper.startLocationUpdates()
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fineGranted || coarseGranted) {
+            locationInputMode = "GPS"
+            lokasiOtomatisState = true
+            prefs.locationInputMode = "GPS"
+            Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
+            locationHelper.refreshLocation { success ->
+                if (success) {
+                    Toast.makeText(context, "Lokasi GPS berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Gagal GPS. Menggunakan estimasi jaringan.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(context, "Izin lokasi ditolak", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun useCurrentGpsLocation() {
+        val hasPermission =
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            locationInputMode = "GPS"
+            lokasiOtomatisState = true
+            prefs.locationInputMode = "GPS"
+            Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
+            locationHelper.refreshLocation { success ->
+                if (success) {
+                    Toast.makeText(context, "Lokasi GPS berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(context, "Gagal GPS. Menggunakan estimasi jaringan.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            permissionLauncher.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
         }
     }
     
-    LaunchedEffect(Unit) {
+    LaunchedEffect(lokasiOtomatisState) {
+        if (!lokasiOtomatisState) return@LaunchedEffect
+
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -244,11 +332,37 @@ fun KiblatScreen(
     var sunAltitude by remember { mutableStateOf<Double?>(null) }
     var moonAzimuth by remember { mutableStateOf<Double?>(null) }
     var moonAltitude by remember { mutableStateOf<Double?>(null) }
-    var rashdulQiblah by remember { mutableStateOf<Double?>(null) }
+    var rashdulQiblah by remember { mutableStateOf<QiblaEngine.RashdulQiblaResult?>(null) }
+    var rashdulDate by remember { mutableStateOf(currentQiblaDateKey()) }
+
+    LaunchedEffect(rashdulDate, lat, lon, tzOffset, prefs.kiblatMethod) {
+        rashdulQiblah = withContext(Dispatchers.Default) {
+            runCatching {
+                QiblaEngine.calculateRashdulQibla(
+                    lat = lat,
+                    lon = lon,
+                    timezone = tzOffset,
+                    year = rashdulDate.year,
+                    month = rashdulDate.month,
+                    day = rashdulDate.day,
+                    method = prefs.kiblatMethod,
+                    context = context
+                )
+            }.getOrNull()
+        }
+    }
     
     LaunchedEffect(lat, lon, tzOffset) {
         while(true) {
             val now = Calendar.getInstance()
+            val today = QiblaDateKey(
+                year = now.get(Calendar.YEAR),
+                month = now.get(Calendar.MONTH) + 1,
+                day = now.get(Calendar.DAY_OF_MONTH)
+            )
+            if (today != rashdulDate) {
+                rashdulDate = today
+            }
             val localTimeFraction = now.get(Calendar.HOUR_OF_DAY) / 24.0 + 
                                    now.get(Calendar.MINUTE) / 1440.0 + 
                                    now.get(Calendar.SECOND) / 86400.0
@@ -266,14 +380,7 @@ fun KiblatScreen(
             val moonPos = QiblaEngine.calculateMoonPosition(jdNow, lat, lon, context)
             moonAzimuth = moonPos.first
             moonAltitude = moonPos.second
-            
-            val jdMidnight = Julian.fromCalendar(
-                now.get(Calendar.YEAR), 
-                now.get(Calendar.MONTH) + 1, 
-                now.get(Calendar.DAY_OF_MONTH).toDouble()
-            )
-            rashdulQiblah = SolarFunctions.rashdulQiblah(jdMidnight, lat, lon)
-            
+
             delay(1000)
         }
     }
@@ -380,16 +487,7 @@ fun KiblatScreen(
                                 text = { Text("Deteksi GPS Otomatis") },
                                 onClick = {
                                     showMenu = false
-                                    lokasiOtomatisState = true
-                                    prefs.lokasiOtomatis = true
-                                    Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
-                                    locationHelper.refreshLocation { success ->
-                                        if (success) {
-                                            Toast.makeText(context, "Lokasi GPS berhasil diperbarui!", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Gagal GPS. Menggunakan estimasi jaringan.", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
+                                    useCurrentGpsLocation()
                                 }
                             )
                             DropdownMenuItem(
@@ -427,7 +525,6 @@ fun KiblatScreen(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
@@ -438,11 +535,21 @@ fun KiblatScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (lokasiOtomatisState) locationState.address else locName,
+                            text = if (lokasiOtomatisState) locationState.address else savedManualLocationName,
                             color = Color.White,
-                            fontSize = 15.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center
+                            maxLines = 2,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Update",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.clickable { showLocationChoiceSheet = true }
                         )
                     }
                     
@@ -584,41 +691,39 @@ fun KiblatScreen(
                                 )
                             }
 
-                            // Sun & Shadow Line (Always visible, data controlled by toggle on Camera Screen)
-                            sunAzimuth?.let { sa ->
-                                val sunAngleRad = Math.toRadians(sa - 90.0)
-                                
-                                // Shadow Line (Opposite)
-                                drawLine(
-                                    color = Color.LightGray.copy(alpha = 0.5f),
-                                    start = center,
-                                    end = center - Offset(
-                                        (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
-                                        (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
-                                    ),
-                                    strokeWidth = 1.5.dp.toPx()
-                                )
-                                
-                                // Sun Line
-                                drawLine(
-                                    color = Color(0xFFFFD54F),
-                                    start = center,
-                                    end = center + Offset(
-                                        (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
-                                        (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
-                                    ),
-                                    strokeWidth = 2.dp.toPx()
-                                )
-                                
-                                // Sun Icon circle
-                                drawCircle(
-                                    color = Color(0xFFFFB300),
-                                    radius = 8.dp.toPx(),
-                                    center = center + Offset(
-                                        (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
-                                        (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
+                            if (showSunMoon) {
+                                sunAzimuth?.let { sa ->
+                                    val sunAngleRad = Math.toRadians(sa - 90.0)
+
+                                    drawLine(
+                                        color = Color.LightGray.copy(alpha = 0.5f),
+                                        start = center,
+                                        end = center - Offset(
+                                            (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
+                                            (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
+                                        ),
+                                        strokeWidth = 1.5.dp.toPx()
                                     )
-                                )
+
+                                    drawLine(
+                                        color = Color(0xFFFFD54F),
+                                        start = center,
+                                        end = center + Offset(
+                                            (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
+                                            (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
+                                        ),
+                                        strokeWidth = 2.dp.toPx()
+                                    )
+
+                                    drawCircle(
+                                        color = Color(0xFFFFB300),
+                                        radius = 8.dp.toPx(),
+                                        center = center + Offset(
+                                            (radius - 30.dp.toPx()) * cos(sunAngleRad).toFloat(),
+                                            (radius - 30.dp.toPx()) * sin(sunAngleRad).toFloat()
+                                        )
+                                    )
+                                }
                             }
 
                             // Kaaba Icon on outer rim at Qibla angle
@@ -772,37 +877,48 @@ fun KiblatScreen(
                     }
                 }
 
-                // Data Astronomi Section
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.3f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Matahari", color = Color(0xFFFFD54F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Az: ${formatDms(sunAzimuth)}", color = Color.White, fontSize = 11.sp)
-                                Text("Alt: ${formatDms(sunAltitude)}", color = Color.White, fontSize = 11.sp)
-                                Text("Byg: ${formatDms(sunAzimuth?.let { (it + 180.0) % 360.0 })}", color = Color.White, fontSize = 11.sp)
+                if (showSunMoon) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.3f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Matahari", color = Color(0xFFFFD54F), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Az: ${formatDms(sunAzimuth)}", color = Color.White, fontSize = 11.sp)
+                                    Text("Alt: ${formatDms(sunAltitude)}", color = Color.White, fontSize = 11.sp)
+                                    Text("Byg: ${formatDms(sunAzimuth?.let { (it + 180.0) % 360.0 })}", color = Color.White, fontSize = 11.sp)
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Bulan", color = Color(0xFFE0E0E0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text("Az: ${formatDms(moonAzimuth)}", color = Color.White, fontSize = 11.sp)
+                                    Text("Alt: ${formatDms(moonAltitude)}", color = Color.White, fontSize = 11.sp)
+                                }
                             }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Bulan", color = Color(0xFFE0E0E0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Text("Az: ${formatDms(moonAzimuth)}", color = Color.White, fontSize = 11.sp)
-                                Text("Alt: ${formatDms(moonAltitude)}", color = Color.White, fontSize = 11.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Rasydu Qiblat Harian", color = Color(0xFF81C784), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = rashdulQiblah?.let { formatDecimalHourHms(it.localHour) } ?: "-",
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    rashdulQiblah?.let {
+                                        val targetText = if (it.target == QiblaEngine.RashdulQiblaResult.Target.SHADOW) {
+                                            "Bayangan = Kiblat"
+                                        } else {
+                                            "Matahari = Kiblat"
+                                        }
+                                        Text(targetText, color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+                                    }
+                                }
                             }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Rasydu Qiblat Harian", color = Color(0xFF81C784), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                text = rashdulQiblah?.let { PrayerTimeFunctions.formatHHMMSS(it + tzOffset) } ?: "-", 
-                                color = Color.White, 
-                                fontSize = 12.sp, 
-                                fontWeight = FontWeight.Bold
-                            )
                         }
                     }
                 }
@@ -872,6 +988,12 @@ fun KiblatScreen(
     }
 
     // Info Dialog
+    if (showCalibrationDialog) {
+        QiblaCalibrationDialog(
+            onDismiss = { showCalibrationDialog = false }
+        )
+    }
+
     if (showInfoDialog) {
         AlertDialog(
             onDismissRequest = { showInfoDialog = false },
@@ -897,6 +1019,20 @@ fun KiblatScreen(
         )
     }
 
+    if (showLocationChoiceSheet) {
+        LocationChoiceSheet(
+            onDismiss = { showLocationChoiceSheet = false },
+            onSearchLocation = {
+                showLocationChoiceSheet = false
+                showCityPickerDialog = true
+            },
+            onUseCurrentLocation = {
+                showLocationChoiceSheet = false
+                useCurrentGpsLocation()
+            }
+        )
+    }
+
     // Manual Location Settings Dialog
     if (showSettings) {
         AlertDialog(
@@ -907,6 +1043,50 @@ fun KiblatScreen(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = locationInputMode == "MANUAL",
+                            onClick = {
+                                locationInputMode = "MANUAL"
+                                lokasiOtomatisState = false
+                                prefs.locationInputMode = "MANUAL"
+                            },
+                            label = { Text("Manual") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = locationInputMode == "DAFTAR_KOTA",
+                            onClick = {
+                                locationInputMode = "DAFTAR_KOTA"
+                                lokasiOtomatisState = false
+                                prefs.locationInputMode = "DAFTAR_KOTA"
+                                showCityPickerDialog = true
+                            },
+                            label = { Text("Kota") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = locationInputMode == "GPS",
+                            onClick = {
+                                locationInputMode = "GPS"
+                                lokasiOtomatisState = true
+                                prefs.locationInputMode = "GPS"
+                            },
+                            label = { Text("GPS") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (locationInputMode == "DAFTAR_KOTA") {
+                        Button(
+                            onClick = { showCityPickerDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Pilih Kota dari Database Offline")
+                        }
+                    }
                     LocationInputBlock(
                         locName = locName,
                         onLocNameChange = {
@@ -961,11 +1141,13 @@ fun KiblatScreen(
                         lokasiOtomatis = lokasiOtomatisState,
                         onLokasiOtomatisChange = { auto ->
                             lokasiOtomatisState = auto
-                            prefs.lokasiOtomatis = auto
+                            locationInputMode = if (auto) "GPS" else "MANUAL"
+                            prefs.locationInputMode = locationInputMode
                         },
                         onUseGps = {
                             lokasiOtomatisState = true
-                            prefs.lokasiOtomatis = true
+                            locationInputMode = "GPS"
+                            prefs.locationInputMode = "GPS"
                             Toast.makeText(context, "Mencari lokasi...", Toast.LENGTH_SHORT).show()
                             locationHelper.refreshLocation { success ->
                                 if (success) {
@@ -987,6 +1169,149 @@ fun KiblatScreen(
                 }
             }
         )
+    }
+    if (showCityPickerDialog) {
+        CityLocationPickerDialog(
+            onDismiss = { showCityPickerDialog = false },
+            onSelect = { city ->
+                locationInputMode = "DAFTAR_KOTA"
+                lokasiOtomatisState = false
+                locName = city.displayName
+                applyCityLocationToPrefs(prefs, city)
+                locationRevision++
+                val latParts = getDms(city.latitude)
+                latDeg = latParts.first.toString()
+                latMin = latParts.second.toString()
+                latSec = latParts.third.toString()
+                latSouth = city.latitude < 0
+                val lonParts = getDms(city.longitude)
+                lonDeg = lonParts.first.toString()
+                lonMin = lonParts.second.toString()
+                lonSec = lonParts.third.toString()
+                lonEast = city.longitude >= 0
+                elevation = city.elevation
+            }
+        )
+    }
+}
+
+@Composable
+private fun QiblaCalibrationDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Kalibrasi Kompas Anda",
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                color = Color.Black
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    "Lakukan gerakan 3 kali, seperti gambar berikut:",
+                    fontSize = 18.sp,
+                    lineHeight = 28.sp,
+                    color = Color(0xFF6F6F76)
+                )
+                Spacer(Modifier.height(18.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(280.dp)
+                        .background(Color.White, RoundedCornerShape(4.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FigureEightCalibrationAnimation(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(250.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF009D8B))
+            ) {
+                Text("Oke", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+@Composable
+private fun FigureEightCalibrationAnimation(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "calibration_figure_eight")
+    val progress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "figure_eight_progress"
+    )
+
+    Canvas(modifier = modifier) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val scale = min(size.width, size.height) * 0.34f
+        val path = Path()
+        for (i in 0..240) {
+            val t = (i / 240f) * (2f * PI.toFloat())
+            val x = center.x + scale * sin(t)
+            val y = center.y + scale * sin(t) * cos(t)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+
+        drawPath(
+            path = path,
+            color = Color(0xFF40C4FF),
+            style = Stroke(
+                width = 4.dp.toPx(),
+                cap = StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(9.dp.toPx(), 8.dp.toPx()), 0f)
+            )
+        )
+
+        val t = progress * (2f * PI.toFloat())
+        val phoneCenter = Offset(
+            x = center.x + scale * sin(t),
+            y = center.y + scale * sin(t) * cos(t)
+        )
+        val dx = scale * cos(t)
+        val dy = scale * (cos(t) * cos(t) - sin(t) * sin(t))
+        val angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat() + 18f
+
+        drawCircle(Color(0xFF2BBEF2), radius = 7.dp.toPx(), center = phoneCenter)
+        rotate(angle, phoneCenter) {
+            drawRoundRect(
+                color = Color(0xFFE5A48E),
+                topLeft = Offset(phoneCenter.x - 22.dp.toPx(), phoneCenter.y + 14.dp.toPx()),
+                size = Size(30.dp.toPx(), 64.dp.toPx()),
+                cornerRadius = CornerRadius(16.dp.toPx(), 16.dp.toPx())
+            )
+            drawRoundRect(
+                color = Color.Black,
+                topLeft = Offset(phoneCenter.x - 16.dp.toPx(), phoneCenter.y - 38.dp.toPx()),
+                size = Size(34.dp.toPx(), 72.dp.toPx()),
+                cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
+            )
+            drawRoundRect(
+                color = Color(0xFF20242A),
+                topLeft = Offset(phoneCenter.x - 12.dp.toPx(), phoneCenter.y - 32.dp.toPx()),
+                size = Size(26.dp.toPx(), 58.dp.toPx()),
+                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+            )
+        }
     }
 }
 

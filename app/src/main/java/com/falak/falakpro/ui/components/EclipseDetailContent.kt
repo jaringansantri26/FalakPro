@@ -245,15 +245,17 @@ fun LocalEclipseDetailContent(detail: LocalEclipseDetail) {
         
         Spacer(Modifier.height(16.dp))
         
-        // 2. Contacts - 6 kolom (Alt, Az, P. Angle, Axis Dist)
+        // 2. Contacts - tampilkan UT dan LT
         NasaSectionHeader("Local Contacts of Eclipse")
         val contactRows = mutableListOf<List<String>>()
         
         val ptStringLocal = { label: String, c: ContactPoint? ->
             if (c != null) {
-                val locJde = c.jdeTD - detail.deltaT / 86400.0 + detail.timezone / 24.0
+                val utJde  = c.jdeTD - detail.deltaT / 86400.0
+                val locJde = utJde + detail.timezone / 24.0
                 listOf(
                     label,
+                    formatJdeToTimeFull(utJde) + "\n" + formatDateString(utJde),
                     formatJdeToTimeFull(locJde) + "\n" + formatDateString(locJde),
                     formatDm(c.latitude),
                     formatDm(c.longitude),
@@ -270,9 +272,9 @@ fun LocalEclipseDetailContent(detail: LocalEclipseDetail) {
         ptStringLocal("C4  Kontak Akhir",    detail.u4)?.let { contactRows.add(it) }
 
         NasaScrollableTable(
-            headers = listOf("Kontak", "Waktu (LT)", "Alt", "Az", "P. Angle", "Axis Dist"),
+            headers = listOf("Kontak", "Waktu (UT)", "Waktu (LT)", "Alt", "Az", "P. Angle", "Axis Dist"),
             rows = contactRows,
-            columnWidths = listOf(140.dp, 90.dp, 75.dp, 75.dp, 75.dp, 75.dp)
+            columnWidths = listOf(145.dp, 90.dp, 90.dp, 75.dp, 75.dp, 75.dp, 75.dp)
         )
         
         Spacer(Modifier.height(16.dp))
@@ -350,7 +352,6 @@ fun NasaScrollableTable(
 ) {
     val scrollState = rememberScrollState()
     val tealPrimary = Color(0xFF00897B)
-    val textDark = MaterialTheme.colorScheme.onSurface
     val dividerColor = Color(0xFFE0E0E0)
     
     Box(
@@ -365,17 +366,21 @@ fun NasaScrollableTable(
             Row(
                 modifier = Modifier
                     .background(Color(0xFFE0F2F1))
-                    .padding(vertical = 8.dp, horizontal = 4.dp)
+                    .padding(vertical = 6.dp, horizontal = 0.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 headers.forEachIndexed { index, header ->
                     Text(
                         text = header,
-                        modifier = Modifier.width(columnWidths[index]),
+                        modifier = Modifier.width(columnWidths[index]).padding(horizontal = 6.dp),
                         color = tealPrimary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
                     )
+                    if (index < headers.size - 1) {
+                        Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color(0xFFB2DFDB)))
+                    }
                 }
             }
             HorizontalDivider(color = Color(0xFFB2DFDB), thickness = 1.dp)
@@ -385,17 +390,21 @@ fun NasaScrollableTable(
                 Row(
                     modifier = Modifier
                         .background(if (rowIndex % 2 == 1) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
-                        .padding(vertical = 8.dp, horizontal = 4.dp)
+                        .padding(vertical = 6.dp, horizontal = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     row.forEachIndexed { index, value ->
                         Text(
                             text = value,
-                            modifier = Modifier.width(columnWidths[index]),
+                            modifier = Modifier.width(columnWidths[index]).padding(horizontal = 6.dp),
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
                         )
+                        if (index < headers.size - 1) {
+                            Box(modifier = Modifier.width(1.dp).height(28.dp).background(dividerColor))
+                        }
                     }
                 }
                 if (rowIndex < rows.size - 1) {
@@ -409,40 +418,64 @@ fun NasaScrollableTable(
 @Composable
 fun NasaTable(headers: List<String>, rows: List<List<String>>, weights: List<Float>) {
     val tealPrimary = Color(0xFF00897B)
-    val textDark = MaterialTheme.colorScheme.onSurface
     val dividerColor = Color(0xFFE0E0E0)
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB2DFDB)), shape = RoundedCornerShape(4.dp))
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
         // Header Row
-        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFE0F2F1))
+                .padding(vertical = 6.dp, horizontal = 0.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             headers.forEachIndexed { index, header ->
                 Text(
                     text = header,
-                    modifier = Modifier.weight(weights[index]),
+                    modifier = Modifier.weight(weights[index]).padding(horizontal = 6.dp),
                     color = tealPrimary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
                 )
+                if (index < headers.size - 1) {
+                    Box(modifier = Modifier.width(1.dp).height(20.dp).background(Color(0xFFB2DFDB)))
+                }
             }
         }
-        HorizontalDivider(color = dividerColor, thickness = 0.5.dp)
+        HorizontalDivider(color = Color(0xFFB2DFDB), thickness = 1.dp)
         
         // Data Rows
-        rows.forEach { row ->
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        rows.forEachIndexed { rowIndex, row ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (rowIndex % 2 == 1) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
+                    .padding(vertical = 6.dp, horizontal = 0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 row.forEachIndexed { index, value ->
                     Text(
                         text = value,
-                        modifier = Modifier.weight(weights[index]),
+                        modifier = Modifier.weight(weights[index]).padding(horizontal = 6.dp),
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
                         textAlign = if (index == 0) TextAlign.Start else TextAlign.Center
                     )
+                    if (index < headers.size - 1) {
+                        Box(modifier = Modifier.width(1.dp).height(22.dp).background(dividerColor))
+                    }
                 }
             }
-            HorizontalDivider(color = dividerColor, thickness = 0.5.dp)
+            if (rowIndex < rows.size - 1) {
+                HorizontalDivider(color = dividerColor, thickness = 0.5.dp)
+            }
         }
     }
 }
@@ -550,17 +583,28 @@ fun BesselianTable(rows: List<BesselianRow>, isLunar: Boolean = false) {
 }
 
 fun formatHms(degrees: Double): String {
-    val h = floor(degrees / 15.0).toInt()
-    val m = floor((degrees / 15.0 - h) * 60.0).toInt()
-    val s = ((degrees / 15.0 - h) * 60.0 - m) * 60.0
+    val total = degrees / 15.0
+    var h = floor(total).toInt()
+    val mFull = (total - h) * 60.0
+    var m = floor(mFull).toInt()
+    var s = (mFull - m) * 60.0
+    val sRounded = kotlin.math.round(s * 10.0) / 10.0
+    if (sRounded >= 60.0) { s = 0.0; m += 1 }
+    else { s = sRounded }
+    if (m >= 60) { m = 0; h += 1 }
     return "+%02dh %02dm %04.1fs".format(h, m, s).replace(".", ",")
 }
 
 fun formatDmsSigned(degrees: Double): String {
     val absDeg = abs(degrees)
-    val d = floor(absDeg).toInt()
-    val m = floor((absDeg - d) * 60.0).toInt()
-    val s = ((absDeg - d) * 60.0 - m) * 60.0
+    var d = floor(absDeg).toInt()
+    val mFull = (absDeg - d) * 60.0
+    var m = floor(mFull).toInt()
+    var s = (mFull - m) * 60.0
+    val sRounded = kotlin.math.round(s * 10.0) / 10.0
+    if (sRounded >= 60.0) { s = 0.0; m += 1 }
+    else { s = sRounded }
+    if (m >= 60) { m = 0; d += 1 }
     val sign = if (degrees >= 0) "+" else "-"
     return "%s%02d° %02d' %04.1f''".format(sign, d, m, s).replace(".", ",")
 }
@@ -599,17 +643,27 @@ fun formatDuration(jdeStart: Double?, jdeEnd: Double?): String {
 
 fun formatJdeToTimeFull(jde: Double): String {
     val h = (jde + 0.5) % 1.0 * 24.0
-    val hh = floor(h).toInt()
-    val mm = floor((h - hh) * 60.0).toInt()
-    val ss = ((h - hh) * 60.0 - mm) * 60.0
-    return "%02d:%02d:%04.1f".format(hh, mm, ss).replace(".", ",")
+    var hh = floor(h).toInt()
+    val mFull = (h - hh) * 60.0
+    var mm = floor(mFull).toInt()
+    var ss = (mFull - mm) * 60.0
+    val ssRounded = kotlin.math.round(ss * 10.0) / 10.0
+    if (ssRounded >= 60.0) { ss = 0.0; mm += 1 }
+    else { ss = ssRounded }
+    if (mm >= 60) { mm = 0; hh += 1 }
+    return "%02d:%02d:%04.1f".format(hh % 24, mm, ss).replace(".", ",")
 }
 
 fun formatDms(deg: Double, isLat: Boolean = false, isLon: Boolean = false): String {
     val absDeg = abs(deg)
-    val d = absDeg.toInt()
-    val m = ((absDeg - d) * 60.0).toInt()
-    val s = ((absDeg - d) * 60.0 - m) * 60.0
+    var d = absDeg.toInt()
+    val mFull = (absDeg - d) * 60.0
+    var m = mFull.toInt()
+    var s = (mFull - m) * 60.0
+    val sRounded = kotlin.math.round(s * 10.0) / 10.0
+    if (sRounded >= 60.0) { s = 0.0; m += 1 }
+    else { s = sRounded }
+    if (m >= 60) { m = 0; d += 1 }
     val symbol = when {
         isLat -> if (deg >= 0) " N" else " S"
         isLon -> if (deg >= 0) " E" else " W"
@@ -879,13 +933,16 @@ fun CombinedSolarEclipseDetailContent(local: LocalEclipseDetail, global: Eclipse
 
                     Spacer(Modifier.height(16.dp))
                     
-                    // Local Contacts Table
+                    // Local Contacts Table (UT + LT)
                     val contactRows = mutableListOf<List<String>>()
                     val ptStringLocal = { label: String, c: ContactPoint? ->
                         if (c != null) {
+                            val utJde  = c.jdeTD - local.deltaT / 86400.0
+                            val locJde = utJde + local.timezone / 24.0
                             listOf(
                                 label,
-                                formatJdeToTimeFull(c.jdeTD + local.timezone / 24.0),
+                                formatJdeToTimeFull(utJde) + "\n" + formatDateString(utJde),
+                                formatJdeToTimeFull(locJde) + "\n" + formatDateString(locJde),
                                 formatDm(c.latitude),
                                 formatDm(c.longitude),
                                 c.positionAngle?.let { String.format(Locale.US, "%.1f°", it) } ?: "-",
@@ -902,9 +959,9 @@ fun CombinedSolarEclipseDetailContent(local: LocalEclipseDetail, global: Eclipse
                     Text("Kontak Lokal:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.height(6.dp))
                     NasaScrollableTable(
-                        headers = listOf("Kontak", "Waktu (LT)", "Alt", "Az", "P. Angle", "Axis Dist"),
+                        headers = listOf("Kontak", "Waktu (UT)", "Waktu (LT)", "Alt", "Az", "P. Angle", "Axis Dist"),
                         rows = contactRows,
-                        columnWidths = listOf(140.dp, 90.dp, 75.dp, 75.dp, 75.dp, 75.dp)
+                        columnWidths = listOf(145.dp, 90.dp, 90.dp, 75.dp, 75.dp, 75.dp, 75.dp)
                     )
 
                     Spacer(Modifier.height(16.dp))
@@ -963,7 +1020,7 @@ fun CombinedSolarEclipseDetailContent(local: LocalEclipseDetail, global: Eclipse
 
                 Spacer(Modifier.height(16.dp))
                 
-                // Helper to search contact
+                // Helper to search contact - tampilkan kontak kronologis dalam satu tabel
                 val cp = { name: String -> global.contacts.find { it.name == name } }
                 val contactRow = { label: String, code: String, c: ContactPoint? ->
                     if (c != null) {
@@ -976,57 +1033,25 @@ fun CombinedSolarEclipseDetailContent(local: LocalEclipseDetail, global: Eclipse
                             c.positionAngle?.let { String.format(Locale.US, "%.1f°", it) } ?: "-",
                             c.axisDistance?.let { String.format(Locale.US, "%.4f°", it) } ?: "-"
                         )
-                    } else {
-                        listOf(label, code, "-", "-", "-", "-", "-", "-")
-                    }
+                    } else null
                 }
 
-                Text("Kontak Penumbra dengan Bumi:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                // Satu tabel kronologis: P1 → U1 → U2 → Mx → U3 → U4 → P4
+                Text("Kontak Bayangan dengan Bumi (Kronologis):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(Modifier.height(6.dp))
+                val globalContactRows = mutableListOf<List<String>>()
+                contactRow("P1  Mulai Penumbra",        "P1", cp("P1"))?.let { globalContactRows.add(it) }
+                contactRow("U1  Mulai Umbra",           "U1", cp("U1"))?.let { globalContactRows.add(it) }
+                contactRow("U2  Kontak Internal",       "U2", cp("U2"))?.let { globalContactRows.add(it) }
+                contactRow("Mx  Puncak Gerhana",        "Mx", cp("Mx"))?.let { globalContactRows.add(it) }
+                contactRow("U3  Kontak Internal",       "U3", cp("U3"))?.let { globalContactRows.add(it) }
+                contactRow("U4  Akhir Umbra",           "U4", cp("U4"))?.let { globalContactRows.add(it) }
+                contactRow("P4  Akhir Penumbra",        "P4", cp("P4"))?.let { globalContactRows.add(it) }
                 NasaScrollableTable(
-                    headers = listOf("Kontak", "Kode", "Waktu TD", "Waktu UT", "Latitude", "Longitude", "P. Angle", "Axis Dist"),
-                    rows = listOf(
-                        contactRow("Mulai Penumbra (P1)", "P1", cp("P1")),
-                        contactRow("Akhir Penumbra (P4)", "P4", cp("P4"))
-                    ),
-                    columnWidths = listOf(160.dp, 50.dp, 90.dp, 90.dp, 130.dp, 130.dp, 75.dp, 75.dp)
+                    headers = listOf("Peristiwa Kontak", "Kode", "Waktu TD", "Waktu UT", "Lintang", "Bujur", "Sudut P", "Jarak Sumbu"),
+                    rows = globalContactRows,
+                    columnWidths = listOf(175.dp, 45.dp, 90.dp, 90.dp, 115.dp, 115.dp, 75.dp, 85.dp)
                 )
-
-                Spacer(Modifier.height(16.dp))
-                Text("Kontak Umbra dengan Bumi:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(6.dp))
-                NasaScrollableTable(
-                    headers = listOf("Kontak", "Kode", "Waktu TD", "Waktu UT", "Latitude", "Longitude", "P. Angle", "Axis Dist"),
-                    rows = listOf(
-                        contactRow("Eksternal Umbra (U1)", "U1", cp("U1")),
-                        contactRow("Internal Umbra (U2)", "U2", cp("U2")),
-                        contactRow("Internal Umbra (U3)", "U3", cp("U3")),
-                        contactRow("Eksternal Umbra (U4)", "U4", cp("U4"))
-                    ),
-                    columnWidths = listOf(160.dp, 50.dp, 90.dp, 90.dp, 130.dp, 130.dp, 75.dp, 75.dp)
-                )
-
-                Spacer(Modifier.height(16.dp))
-                Text("Puncak Gerhana Global (Greatest Eclipse):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Spacer(Modifier.height(6.dp))
-                val mx = cp("Mx")
-                if (mx != null) {
-                    val mxUT = mx.jdeTD - global.deltaT / 86400.0
-                    NasaScrollableTable(
-                        headers = listOf("Kontak", "Waktu TD", "Waktu UT", "Latitude", "Longitude", "P. Angle", "Axis Dist"),
-                        rows = listOf(
-                            listOf("Puncak (Greatest)",
-                                formatJdeToTimeFull(mx.jdeTD) + "\n" + formatDateString(mx.jdeTD),
-                                formatJdeToTimeFull(mxUT) + "\n" + formatDateString(mxUT),
-                                formatDms(mx.latitude,  isLat = true),
-                                formatDms(mx.longitude, isLon = true),
-                                mx.positionAngle?.let { String.format(Locale.US, "%.1f°", it) } ?: "-",
-                                mx.axisDistance?.let { String.format(Locale.US, "%.4f°", it) } ?: "-"
-                            )
-                        ),
-                        columnWidths = listOf(130.dp, 90.dp, 90.dp, 130.dp, 130.dp, 75.dp, 75.dp)
-                    )
-                }
             }
         }
 

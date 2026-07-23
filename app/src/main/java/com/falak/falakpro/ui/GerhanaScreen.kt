@@ -58,6 +58,7 @@ fun GerhanaScreen(
     var yearStr by remember { mutableStateOf("2027") }
     var typology by remember { mutableStateOf("Global") }
     var locationMode by remember { mutableStateOf("Otomatis") }
+    var showCityPickerDialog by remember { mutableStateOf(false) }
 
     // --- Location State ---
     var locName by remember { mutableStateOf("") }
@@ -129,22 +130,36 @@ fun GerhanaScreen(
     }
 
     // Tentukan lokasi aktif
-    val activeLat = if (locationMode == "Manual") {
+    val activeLat = if (locationMode != "Otomatis") {
         latStr.toDoubleOrNull() ?: gpsLat
     } else gpsLat
 
-    val activeLon = if (locationMode == "Manual") {
+    val activeLon = if (locationMode != "Otomatis") {
         lonStr.toDoubleOrNull() ?: gpsLon
     } else gpsLon
 
-    val activeElev = if (locationMode == "Manual") {
+    val activeElev = if (locationMode != "Otomatis") {
         altitude.toDoubleOrNull() ?: gpsElev
     } else gpsElev
 
-    val activeLocName = if (locationMode == "Manual") {
+    val activeLocName = if (locationMode != "Otomatis") {
         locName.ifEmpty { "Manual" }
     } else {
         gpsName.ifEmpty { "Koordinat" }
+    }
+
+    if (showCityPickerDialog) {
+        CityLocationPickerDialog(
+            onDismiss = { showCityPickerDialog = false },
+            onSelect = { city ->
+                locationMode = "Daftar Kota"
+                locName = city.displayName
+                latStr = String.format(Locale.US, "%.6f", city.latitude)
+                lonStr = String.format(Locale.US, "%.6f", city.longitude)
+                altitude = String.format(Locale.US, "%.0f", city.elevation)
+                timezone = String.format(Locale.US, "%.1f", city.timezone)
+            }
+        )
     }
 
     Scaffold { paddingValues ->
@@ -273,6 +288,15 @@ fun GerhanaScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             ChoiceChip(
+                                label = "Daftar Kota",
+                                isSelected = locationMode == "Daftar Kota",
+                                onClick = {
+                                    locationMode = "Daftar Kota"
+                                    showCityPickerDialog = true
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                            ChoiceChip(
                                 label = "Manual",
                                 isSelected = locationMode == "Manual",
                                 onClick = { locationMode = "Manual" },
@@ -280,8 +304,16 @@ fun GerhanaScreen(
                             )
                         }
 
-                        AnimatedVisibility(visible = locationMode == "Manual") {
+                        AnimatedVisibility(visible = locationMode != "Otomatis") {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (locationMode == "Daftar Kota") {
+                                    Button(
+                                        onClick = { showCityPickerDialog = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Pilih Kota dari Database Offline")
+                                    }
+                                }
                                 OutlinedTextField(
                                     value = locName,
                                     onValueChange = { locName = it },

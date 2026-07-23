@@ -1,15 +1,18 @@
 package com.falak.falakpro.ui
 
+
 import com.falak.falakpro.R
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -22,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -38,6 +42,7 @@ import com.falak.falakpro.ui.theme.*
 import com.falak.falakpro.premium.PreferencesHelper
 import com.falak.falakpro.premium.MesinWaktuShalat
 import com.falak.falakpro.premium.CalendarFunctions
+import com.falak.falakpro.premium.WaktuShalatSettingsResolver
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -72,39 +77,29 @@ fun HomeScreen(
         }
     }
 
-    var lokasiOtomatisState by remember(locationData) { mutableStateOf(prefs.lokasiOtomatis) }
-    val lat = if (lokasiOtomatisState) (if (locationData != null && locationData.latitude != 0.0) locationData.latitude else -6.3133) else prefs.manualLat
-    val lon = if (lokasiOtomatisState) (if (locationData != null && locationData.longitude != 0.0) locationData.longitude else 107.3191) else prefs.manualLon
-    val elev = if (lokasiOtomatisState) (if (locationData != null && locationData.altitude != 0.0) locationData.altitude else prefs.ketinggianDataranTinggi) else prefs.manualElev
-    val tz = if (lokasiOtomatisState) timezoneFromLongitude(lon) else prefs.manualTimezone
+    var locationInputMode by remember(locationData) { mutableStateOf(prefs.locationInputMode) }
+    var locationRevision by remember { mutableIntStateOf(0) }
+    var showLocationChoiceSheet by remember { mutableStateOf(false) }
+    var showCityPickerDialog by remember { mutableStateOf(false) }
+    val lokasiOtomatisState = locationInputMode == "GPS"
+    val savedManualLat = remember(locationRevision) { prefs.manualLat }
+    val savedManualLon = remember(locationRevision) { prefs.manualLon }
+    val savedManualElev = remember(locationRevision) { prefs.manualElev }
+    val savedManualTimezone = remember(locationRevision) { prefs.manualTimezone }
+    val savedManualLocationName = remember(locationRevision) { prefs.manualLokasiNama }
+    val lat = if (lokasiOtomatisState) (if (locationData != null && locationData.latitude != 0.0) locationData.latitude else -6.3133) else savedManualLat
+    val lon = if (lokasiOtomatisState) (if (locationData != null && locationData.longitude != 0.0) locationData.longitude else 107.3191) else savedManualLon
+    val elev = if (lokasiOtomatisState) (if (locationData != null && locationData.altitude != 0.0) locationData.altitude else prefs.ketinggianDataranTinggi) else savedManualElev
+    val tz = if (lokasiOtomatisState) timezoneFromLongitude(lon) else savedManualTimezone
     val tzLabel = prayerTimezoneLabel(tz, lon)
 
     val currentDate = Calendar.getInstance()
-    val kriteria = if (prefs.pengaturanOtomatis) {
-        MesinWaktuShalat.DAFTAR_KRITERIA[1]
-    } else if (prefs.kriteriaIndex == 0) {
-        MesinWaktuShalat.KriteriaWaktuShalat(
-            "Sesuaikan Sudut Manual",
-            prefs.sudutManualSubuh.toDouble(),
-            prefs.sudutManualIsya.toDouble(),
-            1.0,
-            4.5
-        )
-    } else {
-        MesinWaktuShalat.DAFTAR_KRITERIA.getOrElse(prefs.kriteriaIndex) { MesinWaktuShalat.KRITERIA_LFNU }
-    }
-    
-    val asharFactor = if (prefs.metodeAsharSyafii) 1.0 else 2.0
-
-    val modePembulatan = when (prefs.pembulatanIndex) {
-        1 -> MesinWaktuShalat.ModePembulatan.KE_ATAS
-        2 -> MesinWaktuShalat.ModePembulatan.KE_BAWAH
-        else -> MesinWaktuShalat.ModePembulatan.NORMAL
-    }
+    val resolvedSettings = WaktuShalatSettingsResolver.resolve(prefs)
+    val kriteria = resolvedSettings.kriteria
 
     val jadwalToday by produceState<List<MesinWaktuShalat.HasilWaktuShalat>>(
         initialValue = emptyList(),
-        currentDate.get(Calendar.DAY_OF_MONTH), lat, lon, elev, tz, prefs.kriteriaIndex, prefs.pengaturanOtomatis, prefs.sudutManualSubuh, prefs.sudutManualIsya, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.ikhSubuh, prefs.ikhImsak, prefs.ikhTerbit, prefs.ikhDhuha, prefs.metodeAsharSyafii, prefs.pembulatanIndex, prefs.is24HourFormat
+        currentDate.get(Calendar.DAY_OF_MONTH), lat, lon, elev, tz, prefs.kriteriaIndex, prefs.pengaturanOtomatis, prefs.sudutManualSubuh, prefs.sudutManualIsya, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.ikhSubuh, prefs.ikhTerbit, prefs.ikhDhuha, prefs.metodeAsharSyafii, prefs.pembulatanIndex, prefs.is24HourFormat
     ) {
         value = withContext(Dispatchers.Default) {
             MesinWaktuShalat.hitung(
@@ -117,7 +112,6 @@ fun HomeScreen(
                 elevasi = elev,
                 zonaWaktu = tz,
                 kriteria = kriteria,
-                ikhImsak = prefs.ikhImsak,
                 ikhSubuh = prefs.ikhSubuh,
                 ikhTerbit = prefs.ikhTerbit,
                 ikhDhuha = prefs.ikhDhuha,
@@ -125,9 +119,9 @@ fun HomeScreen(
                 ikhAshar = prefs.ikhAshar,
                 ikhMaghrib = prefs.ikhMaghrib,
                 ikhIsya = prefs.ikhIsya,
-                pembulatan = modePembulatan,
+                pembulatan = resolvedSettings.pembulatan,
                 gunakanElevasi = true,
-                faktorAshar = asharFactor,
+                faktorAshar = resolvedSettings.faktorAshar,
                 is24HourFormat = prefs.is24HourFormat
             )
         }
@@ -152,7 +146,7 @@ fun HomeScreen(
 
     if (nextPrayerName == "-") {
         val tomorrow = (currentDate.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, 1) }
-        LaunchedEffect(tomorrow.get(Calendar.DAY_OF_MONTH), lat, lon, elev, tz, kriteria, prefs.is24HourFormat) {
+        LaunchedEffect(tomorrow.get(Calendar.DAY_OF_MONTH), lat, lon, elev, tz, prefs.kriteriaIndex, prefs.pengaturanOtomatis, prefs.sudutManualSubuh, prefs.sudutManualIsya, prefs.ikhDzuhur, prefs.ikhAshar, prefs.ikhMaghrib, prefs.ikhIsya, prefs.ikhSubuh, prefs.ikhTerbit, prefs.ikhDhuha, prefs.metodeAsharSyafii, prefs.pembulatanIndex, prefs.is24HourFormat) {
             jadwalTomorrow = withContext(Dispatchers.Default) {
                 MesinWaktuShalat.hitung(
                     konteks = context,
@@ -160,10 +154,10 @@ fun HomeScreen(
                     bulan = tomorrow.get(Calendar.MONTH) + 1,
                     hari = tomorrow.get(Calendar.DAY_OF_MONTH),
                     lintang = lat, bujur = lon, elevasi = elev, zonaWaktu = tz, kriteria = kriteria,
-                    ikhImsak = prefs.ikhImsak, ikhSubuh = prefs.ikhSubuh, ikhTerbit = prefs.ikhTerbit,
+                    ikhSubuh = prefs.ikhSubuh, ikhTerbit = prefs.ikhTerbit,
                     ikhDhuha = prefs.ikhDhuha, ikhDzuhur = prefs.ikhDzuhur, ikhAshar = prefs.ikhAshar,
                     ikhMaghrib = prefs.ikhMaghrib, ikhIsya = prefs.ikhIsya,
-                    pembulatan = modePembulatan, gunakanElevasi = true, faktorAshar = asharFactor,
+                    pembulatan = resolvedSettings.pembulatan, gunakanElevasi = true, faktorAshar = resolvedSettings.faktorAshar,
                     is24HourFormat = prefs.is24HourFormat
                 )
             }
@@ -203,156 +197,254 @@ fun HomeScreen(
         )
     }
     
-    var hijri by remember { mutableStateOf(Triple(1, 1, 1)) }
-    LaunchedEffect(currentJd, lat, lon, tz) {
-        val h = withContext(Dispatchers.Default) {
-            try {
-                CalendarFunctions.getCorrectedHijri(currentJd, lat, lon, elev, tz)
-            } catch (e: Exception) {
-                CalendarFunctions.jdeToHijri(currentJd)
-            }
-        }
-        hijri = h
+    val hijriCriteria = prefs.kriteriaAwalBulan
+    var hijri by remember(currentJd, hijriCriteria) { mutableStateOf<Triple<Int, Int, Int>?>(null) }
+    LaunchedEffect(currentJd, hijriCriteria) {
+        hijri = runCatching {
+            calculateSyncedHijriDate(context, currentJd, hijriCriteria)
+        }.getOrNull()
     }
     
-    val mName = CalendarFunctions.HIJRI_MONTH_NAMES.getOrNull(hijri.second - 1) ?: ""
-    val hijriDateStr = "${hijri.third} $mName ${hijri.first} H"
+    val hijriDateStr = hijri?.let {
+        val mName = CalendarFunctions.HIJRI_MONTH_NAMES.getOrNull(it.second - 1) ?: ""
+        "${it.third} $mName ${it.first} H"
+    } ?: "Memuat Hijriyah"
     val fullDateStr = "$gregorianDateStr / $hijriDateStr"
 
-    val locName = if (lokasiOtomatisState) (if (locationData != null && locationData.address != "Mencari Lokasi...") locationData.address else "Mencari Lokasi...") else prefs.manualLokasiNama
+    val locName = if (lokasiOtomatisState) (if (locationData != null && locationData.address != "Mencari Lokasi...") locationData.address else "Mencari Lokasi...") else savedManualLocationName
     val isLoadingLocation = lokasiOtomatisState && locationData == null
 
-    Column(
+    if (showLocationChoiceSheet) {
+        LocationChoiceSheet(
+            onDismiss = { showLocationChoiceSheet = false },
+            onSearchLocation = {
+                showLocationChoiceSheet = false
+                showCityPickerDialog = true
+            },
+            onUseCurrentLocation = {
+                showLocationChoiceSheet = false
+                locationInputMode = "GPS"
+                prefs.locationInputMode = "GPS"
+                onRefreshLocation()
+            }
+        )
+    }
+    if (showCityPickerDialog) {
+        CityLocationPickerDialog(
+            onDismiss = { showCityPickerDialog = false },
+            onSelect = { city ->
+                applyCityLocationToPrefs(prefs, city)
+                locationInputMode = "DAFTAR_KOTA"
+                locationRevision++
+            }
+        )
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GreenPrimary),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Surface(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 12.dp, end = 12.dp, bottom = 1.dp),
-            shape = RoundedCornerShape(30.dp),
-            color = MaterialTheme.colorScheme.surface
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 15.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // --- Logo ---
+            Box(
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Spacer(modifier = Modifier.height(15.dp))
+                Image(
+                    painter = painterResource(id = R.drawable.logo_falakpro),
+                    contentDescription = "FalakPro Logo",
+                    modifier = Modifier.height(44.dp)
+                )
+            }
 
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(65.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.logo_falakpro),
-                        contentDescription = "FalakPro Logo",
-                        modifier = Modifier.requiredSize(190.dp)
-                    )
-                }
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Spacer(modifier = Modifier.height(5.dp))
-
+            // --- Location bar ---
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, GreenPrimary.copy(alpha = 0.25f))
+            ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { 
-                        lokasiOtomatisState = true
-                        onRefreshLocation() 
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        tint = GreenPrimary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isLoadingLocation) stringResource(R.string.searching_location) else locName,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
+                        if (!isLoadingLocation) {
+                            Text(
+                                text = "\u202A" + formatToDms(lat, true) + ", " + formatToDms(lon, false) + ", ${elev.toInt()} m\u202C",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 9.sp,
+                                style = TextStyle(textDirection = TextDirection.Ltr)
+                            )
+                        }
                     }
-                ) {
-                    Icon(Icons.Filled.LocationOn, contentDescription = null, tint = GreenPrimary, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (isLoadingLocation) stringResource(R.string.searching_location) else "$locName ${stringResource(R.string.update_location)}",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Text(
-                    text = if (isLoadingLocation) "---" else "\u202A" + formatToDms(lat, true) + ", " + formatToDms(lon, false) + ", ${elev.toInt()} m" + "\u202C",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(top = 2.dp),
-                    style = TextStyle(textDirection = TextDirection.Ltr)
-                )
-
-                Column(
-                    modifier = Modifier.padding(top = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = nextPrayerName,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.2.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.clickable { onNavigateToJadwalShalat() },
-                        verticalAlignment = Alignment.Bottom
+                    TextButton(
+                        onClick = { showLocationChoiceSheet = true },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(text = nextPrayerTime, fontSize = 20.sp, fontWeight = FontWeight.Black, color = GreenPrimary)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = tzLabel, fontSize = 20.sp, fontWeight = FontWeight.Black, color = GreenPrimary)
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-
-                    Text(
-                        text = "\u202A- $countdownStr\u202C", 
-                        color = RedAccent, 
-                        fontSize = 12.sp, 
-                        fontWeight = FontWeight.Bold,
-                        style = TextStyle(textDirection = TextDirection.Ltr)
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    AnalogClock(modifier = Modifier.size(160.dp))
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = fullDateStr,
-                    color = GreenPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                val menuItems = listOf(
-                    MenuData(stringResource(R.string.menu_awal_bulan), FalakIcons.HisabColor, onNavigateToAwalBulan),
-                    MenuData(stringResource(R.string.menu_gerhana), FalakIcons.EclipseColor, onNavigateToGerhana),
-                    MenuData(stringResource(R.string.menu_jadwal_shalat), FalakIcons.PrayerColor, onNavigateToJadwalShalat),
-                    MenuData(stringResource(R.string.menu_kalender), FalakIcons.CalendarColor, onNavigateToKalender),
-                    MenuData(stringResource(R.string.menu_kiblat), FalakIcons.KiblatColor, onNavigateToKiblat),
-                    MenuData(stringResource(R.string.menu_data_falak), FalakIcons.DataColor, onNavigateToDataFalak),
-                    MenuData(stringResource(R.string.menu_kalkulator), Icons.Filled.Calculate, onNavigateToScientificCalculator),
-                    MenuData(stringResource(R.string.menu_pengaturan), FalakIcons.SettingsColor, onNavigateToSettings)
-                )
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    userScrollEnabled = true
-                ) {
-                    items(menuItems) { menu ->
-                        CircularMenuItem(menu)
+                        Text(
+                            text = stringResource(R.string.update_location),
+                            color = GreenPrimary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // --- Prayer time hero card --- Green NU gradient
+            val greenGradient = Brush.linearGradient(
+                listOf(Color(0xFF0B6B35), GreenPrimary, Color(0xFF34A85A))
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(brush = greenGradient)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "SHALAT BERIKUTNYA",
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 8.5.sp,
+                            letterSpacing = 1.8.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = nextPrayerName,
+                            color = Color(0xFFFFEE88),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                        Row(
+                            modifier = Modifier.clickable { onNavigateToJadwalShalat() },
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = nextPrayerTime,
+                                color = Color.White,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = tzLabel,
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color.Black.copy(alpha = 0.20f)
+                        ) {
+                            Text(
+                                text = "\u202A\u23F1  $countdownStr\u202C",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                                style = TextStyle(textDirection = TextDirection.Ltr)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    AnalogClock(modifier = Modifier.size(100.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // --- Date bar ---
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = GreenPrimary.copy(alpha = 0.08f),
+                border = BorderStroke(1.dp, GreenPrimary.copy(alpha = 0.25f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.DateRange,
+                        contentDescription = null,
+                        tint = GreenPrimary,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(7.dp))
+                    Text(
+                        text = fullDateStr,
+                        color = GreenPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // --- Menu grid ---
+            val menuItems = listOf(
+                MenuData(stringResource(R.string.menu_awal_bulan), FalakIcons.HisabColor, onNavigateToAwalBulan),
+                MenuData(stringResource(R.string.menu_gerhana), FalakIcons.EclipseColor, onNavigateToGerhana),
+                MenuData(stringResource(R.string.menu_jadwal_shalat), FalakIcons.PrayerColor, onNavigateToJadwalShalat),
+                MenuData(stringResource(R.string.menu_kalender), FalakIcons.CalendarColor, onNavigateToKalender),
+                MenuData(stringResource(R.string.menu_kiblat), FalakIcons.KiblatColor, onNavigateToKiblat),
+                MenuData(stringResource(R.string.menu_data_falak), FalakIcons.DataColor, onNavigateToDataFalak),
+                MenuData(stringResource(R.string.menu_kalkulator), Icons.Filled.Calculate, onNavigateToScientificCalculator),
+                MenuData(stringResource(R.string.menu_pengaturan), FalakIcons.SettingsColor, onNavigateToSettings)
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                userScrollEnabled = true
+            ) {
+                items(menuItems) { menu ->
+                    ModernMenuItem(menu)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -380,28 +472,29 @@ fun AnalogClock(modifier: Modifier = Modifier) {
             delay(1000)
         }
     }
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2, size.height / 2)
         val radius = size.minDimension / 2
-        
-        drawCircle(color = GreenPrimary, radius = radius, style = Stroke(width = 3.dp.toPx()))
 
+        // Outer ring — white
+        drawCircle(color = Color.White, radius = radius, style = Stroke(width = 2.dp.toPx()))
+
+        // Tick marks
         for (i in 0 until 60) {
             val angleDeg = i * 6f - 90f
             val angleRad = Math.toRadians(angleDeg.toDouble())
             val isHour = i % 5 == 0
-            val lineLength = if (isHour) 12.dp.toPx() else 6.dp.toPx()
+            val lineLength = if (isHour) 10.dp.toPx() else 5.dp.toPx()
             val strokeWidth = if (isHour) 2.dp.toPx() else 1.dp.toPx()
-            val color = if (isHour) GreenPrimary else onSurfaceVariantColor.copy(alpha = 0.5f)
+            val color = if (isHour) Color.White else Color.White.copy(alpha = 0.35f)
             val outerPoint = Offset(center.x + radius * cos(angleRad).toFloat(), center.y + radius * sin(angleRad).toFloat())
             val innerPoint = Offset(center.x + (radius - lineLength) * cos(angleRad).toFloat(), center.y + (radius - lineLength) * sin(angleRad).toFloat())
             drawLine(color = color, start = innerPoint, end = outerPoint, strokeWidth = strokeWidth, cap = StrokeCap.Round)
         }
-        
-        drawCircle(color = GreenPrimary, radius = 3.dp.toPx())
+
+        // Center dot — white
+        drawCircle(color = Color.White, radius = 3.5.dp.toPx())
 
         val hours = time.get(Calendar.HOUR)
         val minutes = time.get(Calendar.MINUTE)
@@ -410,34 +503,50 @@ fun AnalogClock(modifier: Modifier = Modifier) {
         val minAngle = minutes * 6f - 90f
         val secAngle = seconds * 6f - 90f
 
-        drawLine(color = onSurfaceColor, start = center, end = Offset(center.x + radius * 0.45f * cos(Math.toRadians(hourAngle.toDouble())).toFloat(), center.y + radius * 0.45f * sin(Math.toRadians(hourAngle.toDouble())).toFloat()), strokeWidth = 5.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(color = onSurfaceColor, start = center, end = Offset(center.x + radius * 0.7f * cos(Math.toRadians(minAngle.toDouble())).toFloat(), center.y + radius * 0.7f * sin(Math.toRadians(minAngle.toDouble())).toFloat()), strokeWidth = 3.5.dp.toPx(), cap = StrokeCap.Round)
-        drawLine(color = Color.Red, start = center, end = Offset(center.x + radius * 0.85f * cos(Math.toRadians(secAngle.toDouble())).toFloat(), center.y + radius * 0.85f * sin(Math.toRadians(secAngle.toDouble())).toFloat()), strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
+        // Hour hand — white, thick
+        drawLine(color = Color.White, start = center, end = Offset(center.x + radius * 0.45f * cos(Math.toRadians(hourAngle.toDouble())).toFloat(), center.y + radius * 0.45f * sin(Math.toRadians(hourAngle.toDouble())).toFloat()), strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
+        // Minute hand — white, medium
+        drawLine(color = Color.White, start = center, end = Offset(center.x + radius * 0.65f * cos(Math.toRadians(minAngle.toDouble())).toFloat(), center.y + radius * 0.65f * sin(Math.toRadians(minAngle.toDouble())).toFloat()), strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round)
+        // Second hand — gold/yellow
+        drawLine(color = Color(0xFFFFEE88), start = center, end = Offset(center.x + radius * 0.8f * cos(Math.toRadians(secAngle.toDouble())).toFloat(), center.y + radius * 0.8f * sin(Math.toRadians(secAngle.toDouble())).toFloat()), strokeWidth = 1.5.dp.toPx(), cap = StrokeCap.Round)
     }
 }
 
 @Composable
-fun CircularMenuItem(menu: MenuData) {
+fun ModernMenuItem(menu: MenuData) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth().clickable { menu.onClick() }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { menu.onClick() }
     ) {
-        Box(
-            modifier = Modifier.size(52.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-            contentAlignment = Alignment.Center
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, GreenPrimary.copy(alpha = 0.25f))
         ) {
-            Icon(
-                imageVector = menu.icon, 
-                contentDescription = menu.title, 
-                tint = Color.Unspecified,
-                modifier = Modifier.size(32.dp)
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = menu.icon,
+                    contentDescription = menu.title,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
         }
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(text = menu.title, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.Center)
+        Spacer(modifier = Modifier.height(5.dp))
+        Text(
+            text = menu.title,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2
+        )
     }
 }
 
 data class MenuData(val title: String, val icon: ImageVector, val onClick: () -> Unit)
-
-

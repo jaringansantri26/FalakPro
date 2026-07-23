@@ -12,61 +12,72 @@ data class HisabRecord(
     val m: Double
 )
 
-class HisabDatabase(
-    context: Context
-) {
+class HisabDatabase(context: Context) {
+    private val store = loadStore(context.applicationContext)
 
-    private val majmuah = mutableMapOf<Int, HisabRecord>()
-    private val mabsuthoh = mutableMapOf<Int, HisabRecord>()
-    private val bulan = mutableMapOf<Int, HisabRecord>()
+    fun getMajmuah(key: Int) = store.majmuah[key]
 
-    init {
+    fun getMabsuthoh(key: Int) = store.mabsuthoh[key]
 
-        val bytes = context.assets
-            .open("harokat_ijtima.bin")
-            .readBytes()
+    fun getBulan(key: Int) = store.bulan[key]
 
-        val buffer = ByteBuffer.wrap(bytes)
-        buffer.order(ByteOrder.LITTLE_ENDIAN)
+    private data class Store(
+        val majmuah: Map<Int, HisabRecord>,
+        val mabsuthoh: Map<Int, HisabRecord>,
+        val bulan: Map<Int, HisabRecord>
+    )
 
-        val majmuahCount = buffer.int
-        val mabsuthohCount = buffer.int
-        val bulanCount = buffer.int
+    companion object {
+        private const val ASSET_NAME = "harokat_ijtima.bin"
+        private val lock = Any()
 
-        repeat(majmuahCount) {
-            val rec = read(buffer)
-            majmuah[rec.key] = rec
+        @Volatile
+        private var cachedStore: Store? = null
+
+        private fun loadStore(context: Context): Store {
+            cachedStore?.let { return it }
+            return synchronized(lock) {
+                cachedStore ?: readStore(context).also { cachedStore = it }
+            }
         }
 
-        repeat(mabsuthohCount) {
-            val rec = read(buffer)
-            mabsuthoh[rec.key] = rec
+        private fun readStore(context: Context): Store {
+            val buffer = context.assets.open(ASSET_NAME).use { input ->
+                ByteBuffer.wrap(input.readBytes()).order(ByteOrder.LITTLE_ENDIAN)
+            }
+
+            val majmuah = mutableMapOf<Int, HisabRecord>()
+            val mabsuthoh = mutableMapOf<Int, HisabRecord>()
+            val bulan = mutableMapOf<Int, HisabRecord>()
+
+            val majmuahCount = buffer.int
+            val mabsuthohCount = buffer.int
+            val bulanCount = buffer.int
+
+            repeat(majmuahCount) {
+                val rec = readRecord(buffer)
+                majmuah[rec.key] = rec
+            }
+            repeat(mabsuthohCount) {
+                val rec = readRecord(buffer)
+                mabsuthoh[rec.key] = rec
+            }
+            repeat(bulanCount) {
+                val rec = readRecord(buffer)
+                bulan[rec.key] = rec
+            }
+
+            return Store(majmuah, mabsuthoh, bulan)
         }
 
-        repeat(bulanCount) {
-            val rec = read(buffer)
-            bulan[rec.key] = rec
+        private fun readRecord(buffer: ByteBuffer): HisabRecord {
+            return HisabRecord(
+                key = buffer.int,
+                a = buffer.double,
+                f = buffer.double,
+                m1 = buffer.double,
+                m = buffer.double
+            )
         }
     }
-
-    private fun read(
-        buffer: ByteBuffer
-    ): HisabRecord {
-        return HisabRecord(
-            key = buffer.int,
-            a = buffer.double,
-            f = buffer.double,
-            m1 = buffer.double,
-            m = buffer.double
-        )
-    }
-
-    fun getMajmuah(key: Int) =
-        majmuah[key]
-
-    fun getMabsuthoh(key: Int) =
-        mabsuthoh[key]
-
-    fun getBulan(key: Int) =
-        bulan[key]
 }

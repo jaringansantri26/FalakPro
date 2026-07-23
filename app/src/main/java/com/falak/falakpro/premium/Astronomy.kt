@@ -22,8 +22,8 @@ object AstroMoonEngine {
         
         // PERSIS Topocentric Logic (Matches SunDatas.kt termX/termY)
         val u = atan(0.99664719 * tan(AstroMath.rad(lat)))
-        val x = cos(u) + (elev / 6378140.0) * cos(AstroMath.rad(lat))
-        val y = 0.99664719 * sin(u) + (elev / 6378140.0) * sin(AstroMath.rad(lat))
+        val x = cos(u) + (elev / AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_M) * cos(AstroMath.rad(lat))
+        val y = 0.99664719 * sin(u) + (elev / AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_M) * sin(AstroMath.rad(lat))
         
         val phi = AstroMath.rad(hp)
         val rHA = AstroMath.rad(ha)
@@ -53,15 +53,3 @@ object AstroMoonEngine {
 /**
  * PersisArahKiblat — 100% Adoption of PERSIS AKiblat.kt.
  */
-object AstroQiblaEngine {
-    fun calculate(lat: Double, lon: Double): Double {
-        val latK = AstroMath.rad(21.4225)
-        val lonK = AstroMath.rad(39.8262)
-        val l = AstroMath.rad(lat)
-        val b = AstroMath.rad(lon)
-        val dL = lonK - b
-        
-        val q = atan2(sin(dL), cos(l) * tan(latK) - sin(l) * cos(dL))
-        return AstroMath.mod(AstroMath.deg(q), 360.0)
-    }
-}

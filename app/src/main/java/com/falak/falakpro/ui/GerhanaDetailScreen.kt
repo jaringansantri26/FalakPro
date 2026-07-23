@@ -1,4 +1,4 @@
-﻿package com.falak.falakpro.ui
+package com.falak.falakpro.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.falak.falakpro.ui.components.EclipseDetailContent
 import com.falak.falakpro.ui.components.LunarDetailContent
 import com.falak.falakpro.ui.components.CombinedSolarEclipseDetailContent
+import com.falak.falakpro.ui.components.FalakHeaderBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,61 +39,52 @@ fun GerhanaDetailScreen(
     val lunarDetail by viewModel.lunarDetail.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    var selectedTabIndex by remember { mutableStateOf(0) }
     val tealPrimary = Color(0xFF00897B)
     val bgWhite = MaterialTheme.colorScheme.background
+
     LaunchedEffect(jdeApprox, isSolar, typology, lat, lon, elev, timezone, locName) {
         viewModel.calculate(jdeApprox, context, isSolar, typology, lat, lon, elev, timezone, locName)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (isSolar) "Detail Gerhana Matahari" else "Detail Gerhana Bulan", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = tealPrimary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(bgWhite)) {
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = tealPrimary)
-                }
-            } else {
-                if (isSolar) {
-                    val global = solarDetail
-                    if (typology == "Global") {
-                        if (global != null) {
-                            EclipseDetailContent(detail = global)
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = tealPrimary)
-                            }
-                        }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgWhite)
+    ) {
+        FalakHeaderBar(
+            title = if (isSolar) "Detail Gerhana Matahari" else "Detail Gerhana Bulan",
+            onBack = onBack
+        )
+
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = tealPrimary)
+            }
+        } else {
+            if (isSolar) {
+                val global = solarDetail
+                if (typology == "Global") {
+                    if (global != null) {
+                        EclipseDetailContent(detail = global)
                     } else {
-                        val local = localSolarDetail
-                        if (local != null && global != null) {
-                            CombinedSolarEclipseDetailContent(local = local, global = global)
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = tealPrimary)
-                            }
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = tealPrimary)
                         }
                     }
                 } else {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        lunarDetail?.let { d ->
-                            LunarDetailContent(detail = d)
+                    val local = localSolarDetail
+                    if (local != null && global != null) {
+                        CombinedSolarEclipseDetailContent(local = local, global = global)
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = tealPrimary)
                         }
+                    }
+                }
+            } else {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    lunarDetail?.let { d ->
+                        LunarDetailContent(detail = d)
                     }
                 }
             }
@@ -113,4 +105,3 @@ fun ShadowRuleChip(label: String, isSelected: Boolean, onClick: () -> Unit, modi
         }
     }
 }
-

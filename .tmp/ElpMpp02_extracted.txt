@@ -1,0 +1,743 @@
+
+===== PAGE 1 =====
+ELP/MPP02 Lunar Ephemeris
+Yuk Tung Liu
+2018-08-14, last modiﬁed: 2024-12-03
+ELP/MPP02 is a semi-analytic solution for the lunar motion developed by J. Chapront and
+G. Francou in 2002. It is an improvement of the ELP2000-82B lunar theory. The major paper
+about the ELP/MPP02 theory is The lunar theory ELP revisited. Introduction of new planetary
+perturbations by J. Chapront and G. Francou, Astronomy and Astrophysics, v.404, p.735-742
+(2003), which you can also ﬁnd references to the ELP2000-82B theory. The authors provide data
+ﬁles, a FORTRAN code and a pdf documentation on this ftp site. ELP/MPP02 theory provides
+two sets of parameters adjusted to ﬁt either the lunar laser ranging (LLR) observation data or
+JPL’s DE405/DE406 ephemerides.
+I have written C++ functions to compute the lunar positions based on the information on
+that ftp site. The full ELP/MPP02 theory contains series involving 35901 terms. High accuracy
+of lunar positions may not be necessary for some applications. It is therefore useful to create a
+truncated series to speed up computation. I have written routines that create a truncated series
+using 4 parameters. I also wrote a function to estimate the accuracy of the truncated series.
+JavaScript is convenient for HTML-based applications, such as my local star charts and equa-
+torial star charts pages. I wrote C++ routines that generate JavaScript functions to compute a
+truncated ELP/MPP02 series.
+This document describes my implementation of the ELP/MPP02 series, the creation of a
+truncated series, and the estimation of the accuracy of the truncated series. I do not explain the
+ELP/MPP02 theory in this document. Readers who are interested in the theory can read the
+paper and the pdf document on the ftp site mentioned above.
+1 Implementation of ELP/MPP02
+The equations for computing the ELP/MPP02 are given in the pdf document on this ftp site. In
+this section, I rewrite the equations in a form that is more convenient for code development.
+1.1 Parameters Adjusted to Fit LLR or DE405/DE406
+The following are values of the parameters adjusted to ﬁt LLR or DE405/DE406. I use the same
+notation as in the pdf document on this ftp site.
+1
+
+===== PAGE 2 =====
+Variable Name in the code LLR DE405/DE406
+∆W (0)
+1 Dw1 0 −0.10525′′ −0.07008′′
+∆W (0)
+2 Dw2 0 +0.16826′′ +0.20794′′
+∆W (0)
+3 Dw3 0 −0.10760′′ −0.07215′′
+∆W (1)
+1 Dw1 1 −0.32311′′/cy −0.35106′′/cy
+∆W (1)
+2 Dw2 1 +0.08017′′/cy +0 .08017′′/cy
+∆W (1)
+3 Dw3 1 −0.04317′′/cy −0.04317′′/cy
+∆W (2)
+1 Dw1 2 −0.03794′′/cy2 −0.03743′′/cy2
+∆Γ Dgam +0.00069′′ +0.00085′′
+∆E De +0.00005′′ −0.00006′′
+∆T (0) Deart 0 −0.04012′′ −0.00033′′
+∆T (1) Deart 1 +0.01442′′/cy +0 .00732′′/cy
+∆ϖ
+′(0) Dperi −0.04854′′ −0.00749′′
+∆e′ Dep +0.00226′′ +0.00224′′
+∆W (3)
+1 Dw1 3 0 −0.00018865′′/cy3
+∆W (4)
+1 Dw1 4 0 −0.00001024′′/cy4
+∆W (2)
+2 Dw2 2 0 +0 .00470602′′/cy2
+∆W (3)
+2 Dw2 3 0 −0.00025213′′/cy3
+∆W (2)
+3 Dw3 2 0 −0.00261070′′/cy2
+∆W (3)
+3 Dw3 3 0 −0.00010712′′/cy3
+Here cy denotes Julian century. Note that the last 6 variables in the DE405/DE406 column
+are used to make ELP/MPP02 approaches closely the JPL Ephemeris DE406 on a long range (a
+few seconds over 6 millennia), whereas the rest are ﬁtted to DE405 only.
+There are 8 more parameters needed. To calculate them, the following constants are calculated
+ﬁrst.
+j B ′
+2,j B′
+3,j
+1 0.311079095 -0.103837907
+2 -0.004482398 0.000668287
+3 -0.001102485 -0.001298072
+4 0.001056062 -0.000178028
+5 0.000050928 -0.000037342
+m = n′/ν = 0.074801329,
+α = a0/a′ = 0.002571881,
+W (1)
+1 = 1732559343 .73604′′/cy + ∆W (1)
+1 ,
+W (1)
+2 = 14643420 .3171′′/cy + ∆W (1)
+2 ,
+W (1)
+3 = −6967919.5383′′/cy + ∆W (1)
+3 ,
+δν = 0 .55604′′/cy + ∆W (1)
+1 ,
+δΓ = −0.08066′′ + ∆Γ,
+δE = 0 .01789′′ + ∆E,
+δe′ = −0.12879′′ + ∆e′,
+δn′ = −0.0642′′/cy + ∆T (1).
+2
+
+===== PAGE 3 =====
+The following are the equations for the 8 remaining parameters.
+δW (1)
+2 =
+
+W (1)
+2
+W (1)
+1
+−m
+(
+B′
+2,1 + 2α
+3mB′
+2,5
+)
+ ∆W (1)
+1 +
+(
+B′
+2,1 + 2α
+3mB′
+2,5
+)
+∆T (1)
++W (1)
+1 (B′
+2,2∆Γ +B′
+2,3∆E +B′
+2,4∆e′)
+δW (1)
+3 =
+
+W (1)
+3
+W (1)
+1
+−m
+(
+B′
+3,1 + 2α
+3mB′
+3,5
+)
+ ∆W (1)
+1 +
+(
+B′
+3,1 + 2α
+3mB′
+3,5
+)
+∆T (1)
++W (1)
+1 (B′
+3,2∆Γ +B′
+3,3∆E +B′
+3,4∆e′)
+fA = 1 − 2δν
+3W (1)
+1
+fB1 = δn′−mδν
+W (1)
+1
+fB2 = δΓ (in radians)
+fB3 = δE (in radians)
+fB4 = δe′ (in radians)
+fB5 = 2α
+3mW (1)
+1
+(δn′−mδν).
+The ﬁrst 21 parameters ∆ W (0)
+1 , ∆W (0)
+2 , ∆W (0)
+3 , ∆W (1)
+1 , ∆W (1)
+2 , ∆W (1)
+3 , ∆W (2)
+1 , ∆Γ, ∆ E,
+∆T (0), ∆T (1), ∆ϖ′(0), ∆e′, ∆W (3)
+1 , ∆W (4)
+1 , ∆W (2)
+2 , ∆W (3)
+2 , ∆W (2)
+3 , ∆W (3)
+3 , δW (1)
+2 , and δW (1)
+3 are
+grouped together in the struct Elp paras in the C++ ﬁle ElpMpp02.cpp. The last 6 parameters
+fA, fB1, fB2, fB3, fB4, and fB5 are grouped in the struct Elp facs in ElpMpp02.cpp. These 27
+parameters are ﬁxed once LLR or DE405/DE406 are speciﬁed. They only need to be computed
+once.
+These parameters are calculated in the subroutine
+setup parameters(int corr, Elp paras &paras, Elp facs &facs)
+Parameters ﬁtted to LLR are computed if corr is 0 and parameters ﬁtted to DE405/DE406 are
+computed if corr is 1. These groupings are convenient if one wants to construct other sets of
+parameters ﬁtted to other data (e.g. DE431).
+1.2 Coeﬃcients of the ELP/MPP02 Series
+The coeﬃcients are stored in the 14 data ﬁles:
+elp main.long, elp main.lat, elp main.dist,
+elp pert.longT0, elp pert.longT1, elp pert.longT2, elp pert.longT3,
+elp pert.latT0, elp pert.latT1, elp pert.latT2,
+elp pert.distT0, elp pert.distT1, elp pert.distT2, elp pert.distT3.
+They are constructed from the data ﬁles on this ftp site and put in a format more convenient
+for C++ implementation. In each ﬁle, the ﬁrst line is an integer indicating the number of terms
+in the series.
+The ﬁrst three ﬁles elp main.long, elp main.lat, and elp main.dist are the Fourier series
+of the longitude, latitude and distance. They contain 11 columns containing
+{i1,i 2,i 3,i 4,A,B 1,B 2,B 3,B 4,B 5,B 6}.
+3
+
+===== PAGE 4 =====
+The series is calculated by the equation
+∑
+{i}
+˜A{i}
+{
+sin
+cos
+}
+(i1D +i2F +i3l +i4l′) {i} ={i1,i 2,i 3,i 4}. (1)
+Longitude and latitude are sine series and distance is cosine series. The 4 variables D, F , l and
+l′ are the Delaunay arguments (see the next subsection). The coeﬃcients ˜A{i} are calculated
+according to
+˜A{i} =
+
+
+
+A{i} +
+5∑
+j=1
+fBjBj{i} for longitude and latitude
+fAA{i} +
+5∑
+j=1
+fBjBj{i} for distance
+, (2)
+where fA and fBj (j = 1, 2, 3, 4, 5) are the paremeters described in the previous subsection. They
+are grouped together in the struct Elp facs in ElpMpp02.cpp. Note that B6{i} are not used in
+the calculation. In addition, the amplitudes A{i} for longitude and latitude are in arcseconds in
+the original data ﬁles. I converted them to radians in the ﬁles elp main.long and elp main.lat.
+The remaining 11 ﬁles contain the Poisson series for perturbations. Each ﬁle has 15 columns
+containingi1, i2, ..., i13, A and φ0. The series is summed according to the equation
+∑
+{i}
+A{i} sinφ {i} ={i1,i 2,...,i 13}, (3)
+The phase φ is given by
+φ =φ0+i1D+i2F +i3l+i4l′+i5Me +i6Ve +i7EM +i8Ma +i9Ju +i10Sa+i11Ur +i12Ne +i13ζ, (4)
+where the 13 arguments D, F , ... will be described in the next subsection. In the longitude and
+latitude ﬁles, the amplitudes A{i} are in radians/cyn. In all perturbation ﬁles, The initial phase
+φ0{i} are in radians.
+The amplitudes ˜A{i} in the main problem are ﬁxed once the adjustable parameters ﬁtted to
+LLR or DE405/DE406 are determined. The amplitudesA{i} in the Poisson series for perturbations
+are the same for the LLR and DE405/DE406 parameters. Hence, all coeﬃcients are determined
+once LLR or DE405/DE406 are speciﬁed. The coeﬃcients are calculated after the parameters
+in the previous subsection are calculated. They are grouped together in the struct Elp coefs in
+ElpMpp02.cpp.
+The coeﬃcients are calculated in the subroutine
+setup Elp coefs(Elp coefs &coefs, Elp facs facs)
+1.3 Lunar and Planetary Arguments
+The Moon and Earth-Moon arguments are given by
+W1 = (218 ◦18′59.95571′′ + ∆W (0)
+1 ) + (1732559343.73604′′/cy + ∆W (1)
+1 )T
++(−6.8084′′/cy2 + ∆W (2)
+1 )T 2 + (0.006604′′/cy3 + ∆W (3)
+1 )T 3
++(−0.00003169′′/cy4 + ∆W (4)
+1 )T 4 (5)
+W2 = (83 ◦21′11.67475′′ + ∆W (0)
+2 ) + (14643420.3171′′/cy + ∆W (1)
+2 +δW (1)
+2 )T
+4
+
+===== PAGE 5 =====
++(−38.2631′′/cy2 + ∆W (2)
+2 )T 2 + (−0.045047′′/cy3 + ∆W (3)
+2 )T 3
++(0.00021301′′/cy4)T 4 (6)
+W3 = (125 ◦2′40.39816′′ + ∆W (0)
+3 ) + (−6967919.5383′′/cy + ∆W (1)
+3 +δW (1)
+3 )T
++(6.359′′/cy2 + ∆W (2)
+3 )T 2 + (0.007625′′/cy3 + ∆W (3)
+3 )T 3
++(−0.00003586′′/cy4)T 4 (7)
+Ea = (100 ◦27′59.13885′′ + ∆T (0)) + (129597742.293′′/cy + ∆T (1))T
++(−0.0202′′/cy2)T 2 + (9′′× 10−6/cy3)T 3
++(1.5′′× 10−7/cy4)T 4 (8)
+ϖ′ = (102 ◦56′14.45766′′ + ∆ϖ′(0)) + (1161.24342′′/cy)T + (0.529265′′/cy2)T 2
+−(1.1814′′× 10−4/cy3)T 3 + (1.1379′′× 10−5/cy4)T 4, (9)
+where T = (JD− 2451545)/36525 is the barycentric dynamical time (TDB) in Julian centuries
+from J2000.0
+Delaunay arguments D, F , l and l′ are given by
+D = W1−Ea + 180◦ (10)
+F = W1−W3 (11)
+l = W1−W2 (12)
+l′ = Ea−ϖ′. (13)
+These are the 4 arguments appearing in the ELP/MPP02 series for the main problem, and also
+the ﬁrst 4 arguments appearing in the ELP/MPP02 series for perturbations. The remaining 9
+arguments in the ELP/MPP02 series for perturbations are given by
+Me = 252 ◦15′3.216919′′ + (538101628.66888′′/cy)T (14)
+Ve = 181 ◦58′44.758419′′ + (210664136.45777′′/cy)T (15)
+EM = 100 ◦27′59.13885′′ + (129597742.293′′/cy)T (16)
+Ma = 355 ◦26′3.642778′′ + (68905077.65936′′/cy)T (17)
+Ju = 34 ◦21′5.379392′′ + (10925660.57335′′/cy)T (18)
+Sa = 50 ◦4′38.902495′′ + (4399609.33632′′/cy)T (19)
+Ur = 314 ◦3′4.354234′′ + (1542482.57845′′/cy)T (20)
+Ne = 304 ◦20′56.808371′′ + (786547.897′′/cy)T (21)
+ζ = W1 + (5028.79695′′/cy)T. (22)
+These 13 arguments are grouped together in the struct Elp args in ElpMpp02.cpp. They are
+calculated in the subroutine
+compute Elp arguments(double T, Elp paras paras, Elp args &args)
+1.4 Position of the Moon
+The natural coordinate system in ELP/MPP02 theory is based on the mean ecliptic of date. In
+this coordinate system, the geocentric ecliptic longitude V , latitudeU and distancer of the Moon
+are given by
+V = W1 + series(elp main.long) + series(elp pert.longT0) + series(elp pert.longT1)·T
+5
+
+===== PAGE 6 =====
++series(elp pert.longT2)·T 2 + series(elp pert.longT3)·T 3 (23)
+U = series( elp main.lat) + series(elp pert.latT0) + series(elp pert.latT1)·T
++series(elp pert.latT2)·T 2 (24)
+r = ra0· [series(elp main.dist) + series(elp pert.distT0) + series(elp pert.distT1)·T
++series(elp pert.distT2)·T 2 + series(elp pert.distT3)·T 3], (25)
+where ra0 =a0(DE405)/a0(ELP) = 384747.961370173/384747.980674318. The rectrangular coor-
+dinates X, Y , Z with respect to the mean ecliptic and equinox of J2000.0 are given by
+
+
+X
+Y
+Z
+
+ =
+
+
+1− 2P 2 2PQ 2P√1−P 2−Q2
+2PQ 1− 2Q2 −2Q√1−P 2−Q2
+−2P√1−P 2−Q2 2Q√1−P 2−Q2 1− 2P 2− 2Q2
+
+
+
+
+r cosV cosU
+r sinV cosU
+r sinU
+
+,
+(26)
+where
+P = 0 .10180391× 10−4T + 0.47020439× 10−6T 2− 0.5417367× 10−9T 3
+−0.2507948× 10−11T 4 + 0.463486× 10−14T 5 (27)
+Q = −0.113469002× 10−3T + 0.12372674× 10−6T 2 + 0.1265417× 10−8T 3
+−0.1371808× 10−11T 4− 0.320334× 10−14T 5. (28)
+Rectangular coordinates X, Y and Z are computed in ElpMpp02.cpp in the subroutine
+getX2000(double T, Elp paras &paras, Elp coefs &coefs, double &X, double &Y, double
+&Z)
+1.5 Velocity of the Moon
+If rectangular components of velocity ˙X, ˙Y and ˙Z are also required, call this subroutine instead:
+getX2000 Xdot2000(double T, Elp paras &paras, Elp coefs &coefs, double (&Xvec)[6]) .
+The ﬁrst three components of the array Xvec storesX,Y andZ. The last three components store
+˙X, ˙Y and ˙Z. Note that the computation of velocity doubles the computation time and should be
+avoided if velocity is not needed.
+1.6 Test Cases
+Test cases are provided in the pdf document on this ftp site. Here I provide another sets of cases
+for code test.
+Lunar geocentric rectangular coordinates (ecliptic and equinox of J2000.0) using parameters
+ﬁtted to LLR.
+TDB JD TDB Date, Time
+(YYYY-MM-DD, HH:MM:SS) X (km) Y (km) Z (km)
+2444269.5 1980-01-31, 00:00:00 -186813.01288 349310.13512 -19003.33883
+2446269.7 1985-07-23, 04:48:00 -367970.07950 -45234.88375 20221.87153
+2448269.9 1991-01-13, 09:36:00 -38942.82455 -403238.94206 -20800.77410
+2450270.1 1996-07-05, 14:24:00 357372.04971 -89978.49535 14501.18831
+2452270.3 2001-12-26, 19:12:00 252208.00739 294433.40162 -21940.36333
+Lunar geocentric rectangular coordinates (ecliptic and equinox of J2000.0) using parameters
+ﬁtted to DE405/DE406.
+6
+
+===== PAGE 7 =====
+TDB JD TDB Date, Time
+(YYYY-MM-DD, HH:MM:SS) X (km) Y (km) Z (km)
+2521835.67 2192-06-13, 04:04:48 -184108.21468 345893.25529 30395.06868
+2265621.33 1490-12-07, 19:55:12 -298024.37832 -213909.67132 -23263.21426
+2009406.99 0789-06-16, 11:45:36 350041.24745 -201093.28987 1643.33539
+1753192.65 0087-12-25, 03:36:00 90272.39894 351997.39617 13417.01712
+1496978.31 -0614-07-03, 19:26:24 -403018.01560 -2639.93889 -28463.89733
+More test cases can be generated by modifying the C++ code example.cpp or using this
+JavaScript calculator (or this JavaScript calculator if velocity is also needed).
+2 Truncated ELP/MPP02 Series
+2.1 Implementation
+The ELP/MPP02 series can be written in the form
+V (T ) = W1(T ) +
+3∑
+i=0
+T i∑
+j
+A(V )
+ij sin
+[
+φ(V )
+ij (T )
+]
+(29)
+U(T ) =
+2∑
+i=0
+T i∑
+j
+A(U )
+ij sin
+[
+φ(U )
+ij (T )
+]
+(30)
+r(T ) =
+3∑
+i=0
+T i∑
+j
+A(r)
+ij sin
+[
+φ(r)
+ij (T )
+]
+, (31)
+where A(U )
+ij , A(V )
+ij , A(r)
+ij are constant amplitudes once the adjustable parameters are chosen. The
+phase angles φ(U )
+ij , φ(V )
+ij , φ(r)
+ij are linear functions of 13 arguments (see Section 1.2).
+I construct a truncated series by the following procedure:
+ Choose four parameters A(U )
+th , A(V )
+th , A(r)
+th and τ.
+ Drop the terms in the series with A(U )
+ij <A (U )
+th /τ i, A(V )
+ij <A (V )
+th /τ i, and A(r)
+ij <A (r)
+th/τ i.
+It is clear that the smaller the parameters A(U )
+th ,A(V )
+th , and A(r)
+th , the closer the truncated series
+is to the original series. The parameter τ has a unit of time and should be chosen to cover the
+time span of interest.
+The truncation is implemented in the ﬁle ElpMpp trim.cpp by the subroutine
+trim Elp coefs(Elp coefs &coefs, Elp coefs &coefs trim, double AthU, double AthV, double
+AthR, double tau)
+where coefs is a struct containing the coeﬃcients of the full series. Coeﬃcients of the truncated
+series will be written to the struct coefs trim. This new struct can be passed to the function
+getX2000() to compute the Moon’s position using the truncated series.
+2.2 Accuracy of Truncated Series
+One simple way to estimate the accuracy of a truncated series is to calculate the sum of the
+absolute value of the amplitudes of the dropped terms. This gives the maximum deviation the
+7
+
+===== PAGE 8 =====
+truncated series could be from the full series. Suppose the truncated series is to be used in the
+time span T1 < T < T2, the maximum possible deviations between the full and truncated series
+are
+∆Vmax =
+3∑
+i=0
+T i
+max
+∑
+dropped A (V)
+ij
+|A(V )
+ij | (32)
+∆Umax =
+2∑
+i=0
+T i
+max
+∑
+dropped A (U)
+ij
+|A(U )
+ij | (33)
+∆rmax =
+3∑
+i=0
+T i
+max
+∑
+dropped A (r)
+ij
+|A(r)
+ij|, (34)
+whereTmax = max(|T1|,|T2|). These estimated deviations are very conservative because in general
+the phases in the terms are diﬀerent and the terms do not have the same sign. Root mean square
+deviations may provide better estimates of typical deviations at any given time between T1 and
+T2:
+rms(∆q) =
+√
+⟨∆q2(T )⟩ =
+√
+⟨ 3∑
+i=0
+3∑
+j=0
+T i+j
+∑
+dropped A (q)
+ik
+∑
+dropped A (q)
+jm
+A(q)
+ik A(q)
+jm sinφ(q)
+ik (T ) sinφ(q)
+jm(T )
+⟩
+,
+(35)
+where q = U,V,r and⟨⟩ denotes time average. Assume that the time average of the cross terms
+are small, which might not be true, the expression may be simpliﬁed to
+rms(∆q)≈
+√
+3∑
+i=0
+T 2i+1
+2 −T 2i+1
+1
+2(2i + 1)(T2−T1)
+∑
+dropped A (q)
+ij
+(
+A(q)
+ij
+)2
+, (36)
+where I have used the approximation that
+⣨
+T 2i sin2φ(q)
+ij
+⟩
+≈
+⣨
+T 2i
+⟩⣨
+sin2φ(q)
+ij (T )
+⟩
+≈ T 2i+1
+2 −T 2i+1
+1
+2(2i + 1)(T2−T1). (37)
+The validity of this approximation is also uncertain. There is also an implicit assumption that any
+time between T1 and T2 is equally likely to be chosen. Whether or not this assumption is valid
+depends on speciﬁc applications. For example, one may want to use a truncated series to calculate
+lunar positions between 1900 and 2100 (T1 =−1, T2 = 1) most of the time, but occasionally may
+want to calculate the positions in ancient times. If this is the case, one should choose multiple
+pairs of (T1,T 2) and estimate the accuracy of the truncated series in those time intervals.
+A more reliable way of estimating the accuracy is to perform a Monte Carlo simulation, in
+which values ofV ,U,r are calculated from both the full series and truncated series at n randomly
+chosen times between T1 and T2. The deviations are then estimated according to the equations
+∆qmax ≈ max(|∆q1|,|∆q2|,··· ,|∆qn|) (38)
+rms(∆q) ≈
+√ 1
+n
+n∑
+i=0
+(∆qi)2, (39)
+8
+
+===== PAGE 9 =====
+where
+∆qi =qfull series (Ti)−qtruncated series (Ti) =
+3∑
+k=0
+T k
+i
+∑
+dropped A (q)
+kj
+A(q)
+kj sinφ(q)
+kj (Ti). (40)
+The crude error estimates from equations (32), (33), (34) and (36) are implemented inElpMpp trim.cpp
+in subroutine
+trim Elp coefs errorEst(Elp coefs &coefs, Elp coefs &coefs trim, Elp coefs &coefs drop,
+double AthU, double AthV, double AthR, double tau, double T1, double T2, devStats
+&stats)
+where coefs drop stores the dropped coeﬃcients and devStats is a struct grouping the variables
+for ∆qmax and rms(∆q).
+The error estimate based on a Monte Carlo (MC) simulation is implemented inElpMpp trim.cpp
+in subroutine
+error est(Elp coefs &coefs drop, Elp paras &paras, int n, double T1, double T2, devStats
+&errStats)
+I set n = 10000 for a typical run to obtain decent statistics. It may take a while to complete
+the simulation, depending on your processor speed. I use the rand() function in <cstdlib> to
+generate random numbers. In my Linux g++ compiler, rand() generates pseudo random integers
+between 0 and 2147483647. A seed is currently set using srand(4852618) in the code to ensure
+reproducibility. It is not clear to me that rand()/2147483647 will produce random numbers
+uniformly distributed between 0 and 1, but the result I get from using rand() seems to agree with
+that obtained from pseudo random numbers generated by R’s runif() function, which generates
+pseudo random numbers uniformly distributed between 0 and 1.
+The following are examples of error estimates computed from the two subroutines.
+In all cases, τ = 50,T1 =−50,T2 = 10 and parameters ﬁtted to DE405/DE406 are used. N is
+the number of terms in the truncated ELP/MPP02 series. ∆ qmax and rms(∆q) (q =V,U,r ) are
+computed from equations (32), (33), (34) and (36).
+A(U )
+th A(V )
+th A(r)
+th N ∆Vmax rms(∆V ) ∆ Umax rms(∆U) ∆ rmax rms(∆r)
+30′′ 30′′ 100 km 42 422 ′′ 45.4′′ 209′′ 32.5′′ 462 km 84.0 km
+10′′ 10′′ 20 km 69 242 ′′ 20.5′′ 137′′ 17.6′′ 282 km 30.5 km
+1′′ 1′′ 2 km 187 74 ′′ 2.95′′ 38.6′′ 3.34′′ 60.2 km 3.96 km
+0.001′′ 0.001′′ 0.1 km 3759 1 .47′′ 0.016′′ 0.80′′ 0.015′′ 16.3 km 0.42 km
+Same as above, but ∆ qmax and rms(∆q) are estimated by Monte Carlo simulations using
+equations (38) and (39) with n = 10000. All ∆ qmax and rms(∆q) are rounded to two signiﬁcant
+ﬁgures, which is about the accuracy of the estimates using n = 10000.
+A(U )
+th A(V )
+th A(r)
+th N ∆Vmax rms(∆V ) ∆ Umax rms(∆U) ∆ rmax rms(∆r)
+30′′ 30′′ 100 km 42 230 ′′ 48′′ 150′′ 34′′ 340 km 86 km
+10′′ 10′′ 20 km 69 100 ′′ 21′′ 98′′ 19′′ 150 km 31 km
+1′′ 1′′ 2 km 187 17 ′′ 3.0′′ 18′′ 2.4′′ 17 km 4.3 km
+0.001′′ 0.001′′ 0.1 km 3759 0 .093′′ 0.016′′ 0.058′′ 0.012′′ 2.0 km 0.42 km
+Not surprisingly, ∆qmax calculated by (32), (33), (34) are always larger than those estimated
+by MC, but the estimates for rms(∆q) by both methods turn out to be quite close for the cases
+considered.
+9
+
+===== PAGE 10 =====
+Note that the accuracy is estimated by comparing the truncated series to the full series. One
+might want to compare the truncated series to other data such as JPL’s ephemerides. The Monte
+Carlo subroutine can be modiﬁed to make that comparison. In the following, I show results
+of comparison between the truncated series and JPL’s DE406 and DE431 in the time intervals
+−50<T < 10.
+In all cases, τ = 50, T1 =−50,T2 = 10 and parameters ﬁtted to DE405/DE406 are used. The
+series is now compared to JPL’s DE406 using Monte Carlo method with n = 10000. The case
+with A(U )
+th =A(V )
+th =A(r)
+th = 0 is the untruncated series.
+A(U )
+th A(V )
+th A(r)
+th N ∆Vmax rms(∆V ) ∆ Umax rms(∆U) ∆ rmax rms(∆r)
+30′′ 30′′ 100 km 42 230 ′′ 47′′ 150′′ 34′′ 370 km 86 km
+10′′ 10′′ 20 km 69 97 ′′ 21′′ 100′′ 19′′ 150 km 31 km
+1′′ 1′′ 2 km 187 15 ′′ 2.9′′ 14′′ 2.4′′ 17 km 4.3 km
+0.001′′ 0.001′′ 0.1 km 3759 3 .5′′ 0.56′′ 0.59′′ 0.10′′ 2.6 km 0.46 km
+0 0 0 35901 3 .5′′ 0.56′′ 0.59′′ 0.10′′ 1.3 km 0.19 km
+Same as the previous table but the comparison is to JPL’s DE431.
+A(U )
+th A(V )
+th A(r)
+th N ∆Vmax rms(∆V ) ∆ Umax rms(∆U) ∆ rmax rms(∆r)
+30′′ 30′′ 100 km 42 240 ′′ 48′′ 150′′ 34′′ 340 km 86 km
+10′′ 10′′ 20 km 69 100 ′′ 21′′ 99′′ 19′′ 150 km 31 km
+1′′ 1′′ 2 km 187 19 ′′ 3.7′′ 18′′ 2.4′′ 17 km 4.3 km
+0.001′′ 0.001′′ 0.1 km 3759 12 .5′′ 2.5′′ 1.5′′ 0.33′′ 3.4 km 0.53 km
+0 0 0 35901 12 .5′′ 2.5′′ 1.5′′ 0.33′′ 2.6 km 0.33 km
+2.3 Saving the Truncated Series
+If you are happy with the truncated series, you may want to save the coeﬃcients of the trun-
+cated series so that you don’t have to recalculate them every time. A subroutine is provided in
+ElpMpp trim.cpp to output the coeﬃcients to 14 data ﬁles:
+output data files(const char *dataFileSuffix, Elp coefs &coefs)
+where coefs is the struct that stores the truncated coeﬃcients. All ﬁle names have the form
+elp MMMM.[X]dataFileSuffix, where MMMM is main or pert, [X] can be long, lat, dist, longT0,
+longT1, longT2, longT3, latT0, latT1, latT2, distT0, distT1, distT2, distT3. dataFileSuffix
+contains characters appended to the ﬁle name. It provides a shorthand notation for the truncated
+series.
+The format of the 14 ﬁles are almost the same as before. The ﬁrst line is an integer indicating
+the number of terms in the series. The three ﬁles for the main problem each has 5 columns
+containing i1, i2, i3, i4 and ˜A. There is no need to calculate ˜A from A and Bi since parameters
+have been chosen to ﬁt either LLR or DE405/DE406 when constructing the truncated series. The
+remaining 11 ﬁles for perturbations are the same as before: 15 columns containing i1, i2, ..., i13,
+A and φ0.
+ElpMpp trim.cpp also has a subroutine that generates a C++ code to compute the truncated
+series based on the 14 data ﬁles created by output data files(). The subroutine is
+generate cpp code(const char* outfile, const char *dataFileSuffix, int corr, double
+AthU, double AthV, double AthR, double tau, Elp paras &paras)
+The ﬁle name of the C++ code is given by the character array outfile.
+10
+
+===== PAGE 11 =====
+The ﬁle example usingElpMpp trim.cpp provides an example of using ElpMpp trim.cpp to
+generate a truncated ELP/MPP02 series, estimate its accuracy, save coeﬃcients to data ﬁles and
+create a C++ code.
+3 JavaScript Code Generation
+JavaScript is convenient for HTML-based applications, such as my local star charts and equatorial
+star charts pages. The ﬁle ElpMpp JavaScript.cpp contains C++ subroutines that can generate
+JavaScript functions to compute a truncated ELP/MPP02 series. Instruction for the use of this
+code is at the beginning of the ﬁle. The two main subroutines are
+generate javascript code(const char* outfile, int corr, double AthU, double AthV, double
+AthR, double tau, Elp paras &paras, Elp coefs &coefs, const char* funSuffix)
+and
+generate javascript code min(const char* outfile, Elp paras &paras, Elp coefs &coefs,
+const char *funSuffix)
+If Moon’s velocity is also needed, call these two subroutines instead:
+generate javascript code with velocity(const char* outfile, int corr, double AthU,
+double AthV, double AthR, double tau, Elp paras &paras, Elp coefs &coefs, const char*
+funSuffix)
+and
+generate javascript code with velocity min(const char* outfile, Elp paras &paras, Elp coefs
+&coefs, const char *funSuffix)
+outfile is ﬁle name of the js ﬁle that will be outputted. Characters in funSuffix will be
+added to every JavaScript function. This is useful to prevent conﬂicts with code that imple-
+ments other versions of the truncated series. The subroutine generate javascript code()
+generates a human-readable js ﬁle. It is intended for your reference only. The subroutine
+generate javascript code min() generates a miniﬁed version of the js ﬁle, in which comments
+and unnecessary white spaces are stripped to optimize performance. The js ﬁles generated by the
+two subroutines provide identical functions.
+Unlike the C++ code generator, no data ﬁles will be outputted. The ELP/MPP02 series
+are written expliticly in the outputted js ﬁle instead of using loops. JavaScript is an interpreted
+language, not a compiled language. So it cannot take advantage of any loop parallization that may
+be available through compilers. In addition, in the computation of phases such as in equation (4),
+many of the i’s are zeros. When writing out the series explicitly, all the zero i’s are removed to
+speed up computation. In fact, writing out the series explicitly may also beneﬁt a C++ code,
+especially when the truncated series contains less than 1000 terms. The subroutines above can be
+modiﬁed easily to turn into a C++ code generator.
+This JavaScript calculator uses two js ﬁles ElpMpp02LLR min.js and ElpMpp02DE min.js to
+compute the ELP/MPP02 series. Only Moon’s position is calculated here. This calculator uses two
+js ﬁles ElpMpp02LLRv min.js and ElpMpp02DEv min.js to compute both position and velocity.
+They are miniﬁed Javascript ﬁles generated using subroutines in ElpMpp JavaScript.cpp by
+setting A(V )
+th =A(U )
+th =A(r)
+th = 0 and using parameters ﬁtted to LLR and DE405/DE406.
+The C++ ﬁle example usingElpMpp JavaScript.cpp provides an example of using
+ElpMpp JavaScript.cpp to generate JavaScript functions to compute a truncated ELP/MPP02
+series.
+11

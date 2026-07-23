@@ -1,4 +1,4 @@
-﻿package com.falak.falakpro.ui
+package com.falak.falakpro.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.falak.falakpro.location.LocationHelper
 import com.falak.falakpro.premium.MesinWaktuShalat
 import com.falak.falakpro.premium.PreferencesHelper
+import com.falak.falakpro.ui.components.FalakHeaderBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,10 +36,6 @@ fun PengaturanWaktuShalatScreen(
     val locationHelper = remember { LocationHelper(context) }
     val locationState by locationHelper.locationState.collectAsState()
     
-    LaunchedEffect(Unit) {
-        locationHelper.startLocationUpdates()
-    }
-
     var lokasiOtomatis by remember { mutableStateOf(prefs.lokasiOtomatis) }
     var manualLat by remember { mutableStateOf(prefs.manualLat) }
     var manualLon by remember { mutableStateOf(prefs.manualLon) }
@@ -47,12 +44,20 @@ fun PengaturanWaktuShalatScreen(
     var manualLokasiNama by remember { mutableStateOf(prefs.manualLokasiNama) }
     var ketinggianDataranTinggi by remember { mutableStateOf(prefs.ketinggianDataranTinggi) }
     var pembulatanIndex by remember { mutableStateOf(prefs.pembulatanIndex) }
+    var locationInputMode by remember { mutableStateOf(prefs.locationInputMode) }
 
-    val lat = if (lokasiOtomatis) (if (locationState.latitude != 0.0) locationState.latitude else -6.3133) else manualLat
-    val lon = if (lokasiOtomatis) (if (locationState.longitude != 0.0) locationState.longitude else 107.3191) else manualLon
-    val elev = if (lokasiOtomatis) locationState.altitude else manualElev
-    val tz = if (lokasiOtomatis) timezoneFromLongitude(lon) else manualTimezone
-    val locName = if (lokasiOtomatis) (if (locationState.address != "Mencari Lokasi...") locationState.address else "Lokasi Tidak Diketahui") else manualLokasiNama
+    LaunchedEffect(lokasiOtomatis) {
+        if (lokasiOtomatis) {
+            locationHelper.startLocationUpdates()
+        }
+    }
+
+    val useGps = locationInputMode == "GPS"
+    val lat = if (useGps) (if (locationState.latitude != 0.0) locationState.latitude else -6.3133) else manualLat
+    val lon = if (useGps) (if (locationState.longitude != 0.0) locationState.longitude else 107.3191) else manualLon
+    val elev = if (useGps) locationState.altitude else manualElev
+    val tz = if (useGps) timezoneFromLongitude(lon) else manualTimezone
+    val locName = if (useGps) (if (locationState.address != "Mencari Lokasi...") locationState.address else "Lokasi Tidak Diketahui") else manualLokasiNama
 
     // Helper formatting DMS
     fun deg(d: Double): String {
@@ -70,59 +75,77 @@ fun PengaturanWaktuShalatScreen(
     val kriteriaList = MesinWaktuShalat.DAFTAR_KRITERIA
     var selectedKriteriaIndex by remember { mutableStateOf(prefs.kriteriaIndex) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Pengaturan Waktu Shalat", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F7C6A))
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.surface
-    ) { paddingValues ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        FalakHeaderBar(
+            title = "Pengaturan Waktu Shalat",
+            onBack = onBack
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
             // Lokasi Waktu Shalat
             SettingSectionTitle("Lokasi Waktu Shalat")
             
+            Text(
+                "Sumber Lokasi",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Gray
+            )
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { 
-                        lokasiOtomatis = !lokasiOtomatis
-                        prefs.lokasiOtomatis = lokasiOtomatis
-                    }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Lokasi Otomatis", fontSize = 16.sp, color = Color.Black)
-                Switch(
-                    checked = lokasiOtomatis, 
-                    onCheckedChange = { 
-                        lokasiOtomatis = it
-                        prefs.lokasiOtomatis = it
+                FilterChip(
+                    selected = locationInputMode == "MANUAL",
+                    onClick = {
+                        locationInputMode = "MANUAL"
+                        lokasiOtomatis = false
+                        prefs.locationInputMode = "MANUAL"
                     },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF0F7C6A))
+                    label = { Text("Manual") },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = locationInputMode == "DAFTAR_KOTA",
+                    onClick = {
+                        locationInputMode = "DAFTAR_KOTA"
+                        lokasiOtomatis = false
+                        prefs.locationInputMode = "DAFTAR_KOTA"
+                    },
+                    label = { Text("Daftar Kota") },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = locationInputMode == "GPS",
+                    onClick = {
+                        locationInputMode = "GPS"
+                        lokasiOtomatis = true
+                        prefs.locationInputMode = "GPS"
+                    },
+                    label = { Text("GPS") },
+                    modifier = Modifier.weight(1f)
                 )
             }
             HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
             
             var showManualLokasiDialog by remember { mutableStateOf(false) }
+            var showCityPickerDialog by remember { mutableStateOf(false) }
             SettingItemValue(
                 title = "Pilih Lokasi", 
                 value = locName,
                 onClick = { 
-                    if (!lokasiOtomatis) {
-                        showManualLokasiDialog = true
+                    when (locationInputMode) {
+                        "DAFTAR_KOTA" -> showCityPickerDialog = true
+                        "MANUAL" -> showManualLokasiDialog = true
                     }
                 }
             )
@@ -137,8 +160,33 @@ fun PengaturanWaktuShalatScreen(
                         manualElev = elevVal
                         manualTimezone = timezoneVal
                         ketinggianDataranTinggi = elevVal
+                        locationInputMode = "MANUAL"
+                        lokasiOtomatis = false
+                        prefs.locationInputMode = "MANUAL"
                     },
                     onDismiss = { showManualLokasiDialog = false }
+                )
+            }
+            if (showCityPickerDialog) {
+                CityLocationPickerDialog(
+                    onDismiss = { showCityPickerDialog = false },
+                    onSelect = { city ->
+                        manualLokasiNama = city.displayName
+                        manualLat = city.latitude
+                        manualLon = city.longitude
+                        manualElev = city.elevation
+                        manualTimezone = city.timezone
+                        ketinggianDataranTinggi = city.elevation
+                        lokasiOtomatis = false
+                        locationInputMode = "DAFTAR_KOTA"
+                        prefs.manualLokasiNama = city.displayName
+                        prefs.manualLat = city.latitude
+                        prefs.manualLon = city.longitude
+                        prefs.manualElev = city.elevation
+                        prefs.manualTimezone = city.timezone
+                        prefs.ketinggianDataranTinggi = city.elevation
+                        prefs.locationInputMode = "DAFTAR_KOTA"
+                    }
                 )
             }
             
@@ -247,15 +295,19 @@ fun PengaturanWaktuShalatScreen(
             var maghrib by remember { mutableStateOf(prefs.ikhMaghrib) }
             var isya by remember { mutableStateOf(prefs.ikhIsya) }
             var subuh by remember { mutableStateOf(prefs.ikhSubuh) }
+            var terbit by remember { mutableStateOf(prefs.ikhTerbit) }
+            var dhuha by remember { mutableStateOf(prefs.ikhDhuha) }
 
+            SettingItemValue("Subuh", "$subuh Menit", { subuh = (subuh + 1) % 6; prefs.ikhSubuh = subuh })
+            SettingItemValue("Terbit", "$terbit Menit", { terbit = (terbit + 1) % 6; prefs.ikhTerbit = terbit })
+            SettingItemValue("Dhuha", "$dhuha Menit", { dhuha = (dhuha + 1) % 6; prefs.ikhDhuha = dhuha })
             SettingItemValue("Zuhur", "$dzuhur Menit", { dzuhur = (dzuhur + 1) % 6; prefs.ikhDzuhur = dzuhur })
             SettingItemValue("Ashar", "$ashar Menit", { ashar = (ashar + 1) % 6; prefs.ikhAshar = ashar })
             SettingItemValue("Maghrib", "$maghrib Menit", { maghrib = (maghrib + 1) % 6; prefs.ikhMaghrib = maghrib })
             SettingItemValue("Isya'", "$isya Menit", { isya = (isya + 1) % 6; prefs.ikhIsya = isya })
-            SettingItemValue("Subuh", "$subuh Menit", { subuh = (subuh + 1) % 6; prefs.ikhSubuh = subuh })
             
             Text(
-                text = "Ihtiyath adalah waktu tambahan pada hasil perhitungan waktu shalat sebenarnya untuk mengantisipasi jam yang kurang akurat, serta menjangkau wilayah yang lebih luas. Namun, penambahan ini juga bisa berarti memperpanjang batas akhir waktu shalat sebelumnya.",
+                text = "Ihtiyath adalah waktu tambahan pada hasil perhitungan waktu shalat sebenarnya. Khusus Terbit, nilai ihtiyath mengurangi waktu karena Terbit menjadi batas akhir Subuh. Imsak mengikuti waktu Subuh tanpa ihtiyath tersendiri.",
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 fontSize = 12.sp, color = Color.Gray, lineHeight = 18.sp
             )

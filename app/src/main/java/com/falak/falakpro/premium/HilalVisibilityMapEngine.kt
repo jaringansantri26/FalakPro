@@ -11,6 +11,7 @@ import kotlin.math.atan
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.tan
 
@@ -85,6 +86,27 @@ data class HilalVisibilityMapResult(
     }
 }
 
+class HilalVisibilityRasterMapResult(
+    val cacheKey: String,
+    val mode: HilalVisibilityMapMode,
+    val scores: FloatArray,
+    val grayMargins: FloatArray,
+    val noEventMasks: ByteArray,
+    val bestPoint: HilalVisibilityPoint?,
+    val latMin: Double,
+    val latMax: Double,
+    val lonMin: Double,
+    val lonMax: Double,
+    val scanLatMin: Double,
+    val scanLatMax: Double,
+    val latStep: Double,
+    val lonStep: Double,
+    val latCount: Int,
+    val lonCount: Int,
+    val dayOffset: Int,
+    val baseDateJdUt: Double
+)
+
 data class VisibilityMapRequest(
     val hijriYear: Int,
     val hijriMonth: Int,
@@ -101,12 +123,13 @@ data class VisibilityMapRequest(
 
 object HilalVisibilityMapEngine {
     private const val KM_PER_AU = 149597870.7
-    private const val EARTH_RADIUS_KM = 6378.14
+    private const val EARTH_RADIUS_KM = AstroTransform.AA_EARTH_EQUATORIAL_RADIUS_KM
     private const val MOON_RADIUS_KM = 1737.4
     private const val SUN_RADIUS_KM = 695700.0
     private const val SYNODIC_MONTH_DAYS = 29.530588861
-    private const val REFRACTION_NEAR_HORIZON_DEG = 34.0 / 60.0
+    private const val REFRACTION_NEAR_HORIZON_DEG = AstroTransform.AA_HORIZON_REFRACTION_DEG
     private val cache = mutableMapOf<String, HilalVisibilityMapResult>()
+    private val rasterCache = mutableMapOf<String, HilalVisibilityRasterMapResult>()
 
     private data class NewMoonWindow(
         val previousUt: Double,
@@ -167,7 +190,7 @@ object HilalVisibilityMapEngine {
             row
         }.collect(Collectors.toList()).flatten()
 
-        val points = applyKghtGlobalOverride(mode, rawPoints)
+        val points = rawPoints
 
         val bestPoint = points
             .filter { it.zone.ordinal <= HilalVisibilityZone.NOT_VISIBLE.ordinal || it.zone == HilalVisibilityZone.GLOBAL_ACCEPTED }
@@ -229,7 +252,7 @@ object HilalVisibilityMapEngine {
             row
         }.collect(Collectors.toList()).flatten()
 
-        val points = applyKghtGlobalOverride(mode, rawPoints)
+        val points = rawPoints
 
         val bestPoint = points
             .filter { it.zone.ordinal <= HilalVisibilityZone.NOT_VISIBLE.ordinal || it.zone == HilalVisibilityZone.GLOBAL_ACCEPTED }
@@ -248,6 +271,118 @@ object HilalVisibilityMapEngine {
             dayOffset = dayOffset,
             baseDateJdUt = baseDateJdUt
         ).also { cache[cacheKey] = it }
+    }
+
+    fun buildFastRasterMap(
+        ijtimaGeoJde: Double,
+        mode: HilalVisibilityMapMode,
+        latStep: Double = 2.0,
+        lonStep: Double = 2.0,
+        dayOffset: Int = 0,
+        baseDateJdUtOverride: Double? = null
+    ): HilalVisibilityRasterMapResult {
+        val latMin = -90.0
+        val latMax = 90.0
+        val lonMin = -180.0
+        val lonMax = 180.0
+        val scanLatMin = -90.0
+        val scanLatMax = 90.0
+
+        val dtIjtima = DynamicalTimeEngine.deltaT(ijtimaGeoJde)
+        val jdUtIjtima = ijtimaGeoJde - dtIjtima / 86400.0
+        val defaultBaseDateJdUt = floor(jdUtIjtima + 0.5) - 0.5
+        val baseDateJdUt = (baseDateJdUtOverride ?: defaultBaseDateJdUt) + dayOffset
+        val cacheKey = String.format(
+            Locale.US,
+            "RASTER_V7:%s:%.5f:%.5f:%.2f:%.2f:%d",
+            mode.name,
+            ijtimaGeoJde,
+            baseDateJdUt,
+            latStep,
+            lonStep,
+            dayOffset
+        )
+        rasterCache[cacheKey]?.let { return it }
+
+        val newMoonWindow = buildNewMoonWindow(jdUtIjtima)
+        val ephTable = buildFastEphTable(baseDateJdUt)
+        val latCount = floor((scanLatMax - scanLatMin) / latStep + 0.5).toInt() + 1
+        val lonCount = floor((lonMax - lonMin) / lonStep + 0.5).toInt() + 1
+        val scores = FloatArray(latCount * lonCount) { -100.0f }
+        val grayMargins = FloatArray(latCount * lonCount) { 1.0f }
+        val noEventMasks = ByteArray(latCount * lonCount)
+        val rowBestPoints = arrayOfNulls<HilalVisibilityPoint>(latCount)
+
+        IntStream.range(0, latCount).parallel().forEach { latIndex ->
+            val lat = scanLatMin + latIndex * latStep
+            var rowBestPoint: HilalVisibilityPoint? = null
+            for (lonIndex in 0 until lonCount) {
+                val lon = lonMin + lonIndex * lonStep
+                val point = evaluateFastPoint(jdUtIjtima, baseDateJdUt, lat, lon, ephTable, mode, newMoonWindow)
+                val index = latIndex * lonCount + lonIndex
+                when (point.zone) {
+                    HilalVisibilityZone.BEFORE_CONJUNCTION,
+                    HilalVisibilityZone.MOON_SET_BEFORE_SUN -> {
+                        grayMargins[index] = grayMargin(point)
+                        scores[index] = -100.0f
+                    }
+                    HilalVisibilityZone.NO_EVENT -> {
+                        noEventMasks[index] = 1
+                        scores[index] = -100.0f
+                    }
+                    else -> {
+                        scores[index] = point.score.toFloat()
+                        grayMargins[index] = grayMargin(point)
+                        val currentBest = rowBestPoint
+                        if (currentBest == null ||
+                            point.score > currentBest.score ||
+                            (point.score == currentBest.score && point.arcV > currentBest.arcV) ||
+                            (point.score == currentBest.score && point.arcV == currentBest.arcV && point.arcL > currentBest.arcL)
+                        ) {
+                            rowBestPoint = point
+                        }
+                    }
+                }
+            }
+            rowBestPoints[latIndex] = rowBestPoint
+        }
+        val bestPoint = rowBestPoints.filterNotNull()
+            .maxWithOrNull(compareBy<HilalVisibilityPoint> { it.score }.thenBy { it.arcV }.thenBy { it.arcL })
+
+        return HilalVisibilityRasterMapResult(
+            cacheKey = cacheKey,
+            mode = mode,
+            scores = scores,
+            grayMargins = grayMargins,
+            noEventMasks = noEventMasks,
+            bestPoint = bestPoint,
+            latMin = latMin,
+            latMax = latMax,
+            lonMin = lonMin,
+            lonMax = lonMax,
+            scanLatMin = scanLatMin,
+            scanLatMax = scanLatMax,
+            latStep = latStep,
+            lonStep = lonStep,
+            latCount = latCount,
+            lonCount = lonCount,
+            dayOffset = dayOffset,
+            baseDateJdUt = baseDateJdUt
+        ).also { rasterCache[cacheKey] = it }
+    }
+
+    private fun grayMargin(point: HilalVisibilityPoint): Float {
+        val lag = if (point.moonLagHours.isFinite()) point.moonLagHours else 24.0
+        val age = if (point.sunsetAgeHours.isFinite()) point.sunsetAgeHours else 24.0
+        val altitude = if (point.moonAltTopo.isFinite()) point.moonAltTopo else 24.0
+        val margin = min(min(lag, age), altitude)
+        return if (point.zone == HilalVisibilityZone.BEFORE_CONJUNCTION ||
+            point.zone == HilalVisibilityZone.MOON_SET_BEFORE_SUN
+        ) {
+            margin.coerceAtMost(-1e-4).toFloat()
+        } else {
+            margin.toFloat()
+        }
     }
 
     /**
@@ -307,7 +442,7 @@ object HilalVisibilityMapEngine {
                 }
                 row
             }.collect(Collectors.toList()).flatten()
-            points = applyKghtGlobalOverride(mode, rawPoints)
+            points = rawPoints
         } else {
             // Tidak terpenuhi: buat grid transparan saja (cepat, tanpa hitung lengkap)
             points = ArrayList<HilalVisibilityPoint>(latCount * lonCount).apply {
@@ -382,49 +517,28 @@ object HilalVisibilityMapEngine {
         val startUt = baseDateJdUt - lon / 360.0
         val sunsetUt = searchSet(Body.SUN, startUt, lat, lon, table)
             ?: return specialPoint(lat, lon, HilalVisibilityZone.NO_EVENT)
-        val moonsetUt = searchSet(Body.MOON, startUt, lat, lon, table)
-            ?: return specialPoint(
-                lat,
-                lon,
-                HilalVisibilityZone.NO_EVENT,
-                ageHours = (sunsetUt - nearestNewMoonUt(sunsetUt, newMoonWindow)) * 24.0
-            )
-        val lagDays = moonsetUt - sunsetUt
-        val moonLagHours = lagDays * 24.0
         val nearestNewMoonUt = nearestNewMoonUt(sunsetUt, newMoonWindow)
         val beforeConjunction = sunsetUt < nearestNewMoonUt
         val ageAtSunsetHours = (sunsetUt - nearestNewMoonUt) * 24.0
-
-        if (lagDays < 0.0 && beforeConjunction) {
-            return specialPoint(
-                lat,
-                lon,
-                HilalVisibilityZone.BEFORE_CONJUNCTION,
-                ageHours = ageAtSunsetHours,
-                moonLagHours = moonLagHours
-            )
-        }
-        if (lagDays < 0.0) {
-            return specialPoint(
-                lat,
-                lon,
-                HilalVisibilityZone.MOON_SET_BEFORE_SUN,
-                ageHours = ageAtSunsetHours,
-                moonLagHours = moonLagHours
-            )
-        }
-        if (beforeConjunction) {
-            return specialPoint(
-                lat,
-                lon,
-                HilalVisibilityZone.BEFORE_CONJUNCTION,
-                ageHours = ageAtSunsetHours,
-                moonLagHours = moonLagHours
-            )
-        }
-
         val usesBestTime = mode == HilalVisibilityMapMode.YALLOP || mode == HilalVisibilityMapMode.ODEH
-        val evaluationUt = if (usesBestTime) sunsetUt + lagDays * 4.0 / 9.0 else sunsetUt
+        val moonsetUt = if (usesBestTime) searchSet(Body.MOON, startUt, lat, lon, table) else null
+        if (usesBestTime && moonsetUt == null) {
+            return specialPoint(
+                lat,
+                lon,
+                HilalVisibilityZone.NO_EVENT,
+                ageHours = ageAtSunsetHours
+            )
+        }
+        val lagDays = moonsetUt?.let { it - sunsetUt }
+
+        val zoneOverride = when {
+            beforeConjunction -> HilalVisibilityZone.BEFORE_CONJUNCTION
+            usesBestTime && lagDays != null && lagDays < 0.0 -> HilalVisibilityZone.MOON_SET_BEFORE_SUN
+            else -> null
+        }
+
+        val evaluationUt = if (usesBestTime && lagDays != null) sunsetUt + lagDays * 4.0 / 9.0 else sunsetUt
         val eph = interpolateEph(evaluationUt, table)
         val gast = AstroDataUtils.calculateGAST(evaluationUt)
         val sunHorizontal = horizontal(eph.sunRa, eph.sunDec, lat, lon, gast)
@@ -437,7 +551,7 @@ object HilalVisibilityMapEngine {
         val daz = angularDistanceAbs(sunHorizontal.azimuth, moonHorizontal.azimuth)
         val arcL = if (mode == HilalVisibilityMapMode.ODEH) topoArcL else geoArcL
         val arcV = if (mode == HilalVisibilityMapMode.ODEH) {
-            odehArcV(topoArcL, daz)
+            signedOdehArcV(topoArcL, daz, moonHorizontal.altitude - sunHorizontal.altitude)
         } else {
             moonGeoHorizontal.altitude - sunHorizontal.altitude
         }
@@ -451,10 +565,19 @@ object HilalVisibilityMapEngine {
         val moonAltTopoApparent = moonHorizontal.altitude + refBulan
 
         val (zone, score) = classifyByMode(mode, arcV, arcL, ageHours, crescentWidthArcMin, moonAltTopoApparent, moonGeoHorizontal.altitude, jdUtIjtima, sunsetUt)
+        val finalZone = zoneOverride ?: if (!usesBestTime && moonAltTopoApparent < 0.0) {
+            HilalVisibilityZone.MOON_SET_BEFORE_SUN
+        } else {
+            zone
+        }
+        val moonLagHours = when {
+            lagDays != null -> lagDays * 24.0
+            else -> Double.NaN
+        }
         return HilalVisibilityPoint(
             latitude = lat,
             longitude = lon,
-            zone = zone,
+            zone = finalZone,
             score = score,
             arcV = arcV,
             arcL = arcL,
@@ -488,14 +611,11 @@ object HilalVisibilityMapEngine {
         val nearestNewMoonUt = nearestNewMoonUt(sunsetUt, newMoonWindow)
         val beforeConjunction = sunsetUt < nearestNewMoonUt
         val ageAtSunsetHours = (sunsetUt - nearestNewMoonUt) * 24.0
-        if (lagDays < 0.0 && beforeConjunction) {
-            return specialPoint(lat, lon, HilalVisibilityZone.BEFORE_CONJUNCTION, ageHours = ageAtSunsetHours, moonLagHours = lagHours)
-        }
-        if (lagDays < 0.0) {
-            return specialPoint(lat, lon, HilalVisibilityZone.MOON_SET_BEFORE_SUN, ageHours = ageAtSunsetHours, moonLagHours = lagHours)
-        }
-        if (beforeConjunction) {
-            return specialPoint(lat, lon, HilalVisibilityZone.BEFORE_CONJUNCTION, ageHours = ageAtSunsetHours, moonLagHours = lagHours)
+        val zoneOverride = when {
+            lagDays < 0.0 && beforeConjunction -> HilalVisibilityZone.BEFORE_CONJUNCTION
+            lagDays < 0.0 -> HilalVisibilityZone.MOON_SET_BEFORE_SUN
+            beforeConjunction -> HilalVisibilityZone.BEFORE_CONJUNCTION
+            else -> null
         }
 
         val usesBestTime = mode == HilalVisibilityMapMode.YALLOP || mode == HilalVisibilityMapMode.ODEH
@@ -512,7 +632,7 @@ object HilalVisibilityMapEngine {
         val daz = angularDistanceAbs(sunHorizontal.azimuth, moonHorizontal.azimuth)
         val arcL = if (mode == HilalVisibilityMapMode.ODEH) topoArcL else geoArcL
         val arcV = if (mode == HilalVisibilityMapMode.ODEH) {
-            odehArcV(topoArcL, daz)
+            signedOdehArcV(topoArcL, daz, moonHorizontal.altitude - sunHorizontal.altitude)
         } else {
             moonGeoHorizontal.altitude - sunHorizontal.altitude
         }
@@ -530,7 +650,7 @@ object HilalVisibilityMapEngine {
         return HilalVisibilityPoint(
             latitude = lat,
             longitude = lon,
-            zone = zone,
+            zone = zoneOverride ?: zone,
             score = score,
             arcV = arcV,
             arcL = arcL,
@@ -694,16 +814,13 @@ object HilalVisibilityMapEngine {
         return when (mode) {
             HilalVisibilityMapMode.YALLOP -> classifyYallop(arcV, crescentWidthArcMin)
             HilalVisibilityMapMode.ODEH -> classifyOdeh(arcV, crescentWidthArcMin)
-            HilalVisibilityMapMode.MABIMS_BARU -> classifyCriteria(moonAltTopo >= 3.0 && arcL >= 6.4, moonAltTopo + arcL)
-            HilalVisibilityMapMode.MABIMS_LAMA -> classifyCriteria(moonAltTopo >= 2.0 && arcL >= 3.0 && ageHours >= 8.0, moonAltTopo + arcL)
-            HilalVisibilityMapMode.WUJUDUL_HILAL -> classifyCriteria(moonAltGeo > 0.0, moonAltGeo)
-            HilalVisibilityMapMode.LAPAN -> classifyCriteria(moonAltTopo >= 2.0 && ageHours >= 8.0, moonAltTopo + ageHours)
-            HilalVisibilityMapMode.DANJON -> classifyCriteria(arcL >= 7.0, arcL)
-            // KGHT: kriteria local — altitude & elongasi saja pada saat magrib.
-            // Batas tanggal sudah otomatis dikontrol via startUt = baseDateJdUt - lon/360.0
-            // sehingga sunset yang ditemukan adalah sunset pada tanggal lokal yang tepat.
-            HilalVisibilityMapMode.KGHT_TURKI -> classifyCriteria(moonAltTopo >= 5.0 && arcL >= 8.0, moonAltTopo + arcL)
-            HilalVisibilityMapMode.KGHT_MUHAMMADIYAH -> classifyCriteria(moonAltGeo >= 5.0 && arcL >= 8.0, moonAltGeo + arcL)
+            HilalVisibilityMapMode.MABIMS_BARU -> classifyContinuous(min(moonAltTopo - 3.0, arcL - 6.4))
+            HilalVisibilityMapMode.MABIMS_LAMA -> classifyContinuous(min(moonAltTopo - 2.0, min(arcL - 3.0, ageHours - 8.0)))
+            HilalVisibilityMapMode.WUJUDUL_HILAL -> classifyContinuous(min(moonAltGeo, (sunsetUt - jdUtIjtima) * 24.0))
+            HilalVisibilityMapMode.LAPAN -> classifyContinuous(min(moonAltTopo - 2.0, arcL - 3.0))
+            HilalVisibilityMapMode.DANJON -> classifyContinuous(arcL - 7.0)
+            HilalVisibilityMapMode.KGHT_TURKI -> classifyContinuous(min(moonAltTopo - 5.0, arcL - 8.0))
+            HilalVisibilityMapMode.KGHT_MUHAMMADIYAH -> classifyContinuous(min(moonAltGeo - 5.0, arcL - 8.0))
         }
     }
 
@@ -733,43 +850,13 @@ object HilalVisibilityMapEngine {
         return zone to v
     }
 
-    private fun classifyCriteria(meetsCriteria: Boolean, score: Double): Pair<HilalVisibilityZone, Double> {
-        return (if (meetsCriteria) HilalVisibilityZone.EASY_NAKED_EYE else HilalVisibilityZone.NOT_VISIBLE) to
-            if (meetsCriteria) score else -score
-    }
-
-    /**
-     * KGHT adalah kriteria kalender global:
-     * Jika kriteria terpenuhi di SATU titik mana pun (sebelum tengah malam UTC),
-     * maka seluruh titik yang bukan BEFORE_CONJUNCTION/MOON_SET_BEFORE_SUN juga dianggap
-     * memenuhi syarat (GLOBAL_ACCEPTED). Kurva batas lokal tetap ditampilkan melalui
-     * titik-titik yang EASY_NAKED_EYE (terpenuhi lokal).
-     */
-    private fun applyKghtGlobalOverride(
-        mode: HilalVisibilityMapMode,
-        points: List<HilalVisibilityPoint>
-    ): List<HilalVisibilityPoint> {
-        if (mode != HilalVisibilityMapMode.KGHT_TURKI && mode != HilalVisibilityMapMode.KGHT_MUHAMMADIYAH) {
-            return points
-        }
-        // Cek apakah ada titik yang benar-benar memenuhi kriteria KGHT secara lokal
-        val globallyMet = points.any { it.zone == HilalVisibilityZone.EASY_NAKED_EYE }
-        if (!globallyMet) return points
-
-        // Jika ya, upgrade semua titik biasa (NOT_VISIBLE) ke GLOBAL_ACCEPTED
-        // Titik EASY_NAKED_EYE (kurva lokal) tetap dibiarkan untuk menunjukkan batas
-        val specialZones = setOf(
-            HilalVisibilityZone.BEFORE_CONJUNCTION,
-            HilalVisibilityZone.MOON_SET_BEFORE_SUN,
-            HilalVisibilityZone.NO_EVENT
-        )
-        return points.map { p ->
-            if (p.zone == HilalVisibilityZone.NOT_VISIBLE) {
-                p.copy(zone = HilalVisibilityZone.GLOBAL_ACCEPTED)
-            } else {
-                p
-            }
-        }
+    private fun classifyContinuous(margin: Double): Pair<HilalVisibilityZone, Double> {
+        // margin >= 0.0 berarti memenuhi syarat.
+        // Konversi margin agar saat margin == 0.0, score == 8.0 (batas AL_HABIB_EASY)
+        // Jika margin < 0.0 (misal -0.1), score = 7.9 (tidak memenuhi AL_HABIB_EASY)
+        // Dan jika sangat jauh (misal margin < -8.0), score akan < 0.0 menjadi TRANSPARENT.
+        val score = 8.0 + margin
+        return (if (margin >= 0.0) HilalVisibilityZone.EASY_NAKED_EYE else HilalVisibilityZone.NOT_VISIBLE) to score
     }
 
     private fun topocentricMoon(
@@ -827,6 +914,11 @@ object HilalVisibilityMapEngine {
         val cosDaz = cos(AstroMath.rad(daz))
         if (abs(cosDaz) < 1e-12) return 90.0
         return AstroMath.deg(acos((cos(AstroMath.rad(arcL)) / cosDaz).coerceIn(-1.0, 1.0)))
+    }
+
+    private fun signedOdehArcV(arcL: Double, daz: Double, altitudeDifference: Double): Double {
+        val unsigned = odehArcV(arcL, daz)
+        return if (altitudeDifference < 0.0) -unsigned else unsigned
     }
 
     private fun angularDistanceAbs(a: Double, b: Double): Double {

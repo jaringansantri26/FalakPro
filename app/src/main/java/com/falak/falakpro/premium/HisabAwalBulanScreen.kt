@@ -7,6 +7,8 @@ import android.location.Geocoder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,15 +19,19 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -476,6 +482,7 @@ fun HisabAwalBulanScreen(
     // State untuk input Hijriah
     var hijriYear by remember { mutableStateOf("1447") }
     var hijriMonth by remember { mutableStateOf("8") }
+    var bulanDropdownExpanded by remember { mutableStateOf(false) }
 
     // State lokasi
     var locationMode by remember { mutableStateOf(LocationMode.OTOMATIS) }
@@ -619,20 +626,54 @@ fun HisabAwalBulanScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                         // Input Bulan & Tahun Hijriyah
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = hijriMonth,
-                                onValueChange = { hijriMonth = it },
-                                label = { Text("Bulan Hijriyah (1-12)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val selectedMonthName = remember(hijriMonth) {
+                                val monthInt = hijriMonth.toIntOrNull() ?: 1
+                                val name = CalendarFunctions.HIJRI_MONTH_NAMES.getOrElse(monthInt - 1) { "Muharram" }
+                                "$monthInt. $name"
+                            }
+
+                            ExposedDropdownMenuBox(
+                                expanded = bulanDropdownExpanded,
+                                onExpandedChange = { bulanDropdownExpanded = it },
+                                modifier = Modifier.weight(1.4f)
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedMonthName,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Bulan Hijriyah") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bulanDropdownExpanded) },
+                                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = bulanDropdownExpanded,
+                                    onDismissRequest = { bulanDropdownExpanded = false }
+                                ) {
+                                    CalendarFunctions.HIJRI_MONTH_NAMES.forEachIndexed { index, name ->
+                                        val monthNum = index + 1
+                                        DropdownMenuItem(
+                                            text = { Text("$monthNum. $name") },
+                                            onClick = {
+                                                hijriMonth = monthNum.toString()
+                                                bulanDropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
                             OutlinedTextField(
                                 value = hijriYear,
                                 onValueChange = { hijriYear = it },
                                 label = { Text("Tahun Hijriyah") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(0.9f)
                             )
                         }
 
@@ -1057,31 +1098,9 @@ fun HisabAwalBulanScreen(
                     }
                 }
 
-                // 2. Data Kesimpulan Ringkas
+                // 2. Data Hisab Lengkap - Multisection
                 if (!isKghtGlobalCriteria(selectedKriteria)) {
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("2. Data Kesimpulan Hisab", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            SummaryRow("Ijtima' Geosentris", res.ijtimaGeoStr.lines().take(2).joinToString(" | "))
-                            SummaryRow("Julian Day (JDE)", String.format(Locale.US, "%.5f", res.julianDay))
-                            SummaryRow("ΔT (Delta T)", String.format(Locale.US, "%.2f detik", res.deltaT))
-                            SummaryRow("Matahari terbenam", res.ghurubSun)
-                            SummaryRow("Hilal terbenam", res.ghurubMoon)
-                            SummaryRow("Ketinggian Hilal Hakiki (Geo)", res.altGeoBulanStr)
-                            SummaryRow("Ketinggian Hilal Mar'i (Topo)", res.altMariStr)
-                            SummaryRow("Elongasi Geosentris", res.elongasiGeoStr)
-                            SummaryRow("Elongasi Toposentris", res.elongasiTopoStr)
-                            SummaryRow("Illuminasi", res.illumination)
-                            SummaryRow("Semidiameter", res.semidiameter)
-                            SummaryRow("Lebar Sabit", res.lebarSabitStr)
-                        }
-                    }
+                    HisabDetailSections(res = res)
                 }
 
                 // Kesimpulan final
@@ -1209,3 +1228,138 @@ fun SummaryRow(label: String, value: String, isNegativeRed: Boolean = false) {
         )
     }
 }
+@Composable
+fun HisabDetailSections(res: HilalResult) {
+    // 2. Ijtima' (Konjungsi)
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.Star, title = "2. Ijtima' (Konjungsi)")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SummaryRow("Waktu Ijtima' Geosentris", res.ijtimaGeoStr)
+            SummaryRow("Waktu Ijtima' Toposentris", res.ijtimaTopoStr)
+            SummaryRow("Julian Day Ephemeris (JDE)", String.format(Locale.US, "%.5f", res.julianDay))
+            SummaryRow("Selisih Waktu (?T)", String.format(Locale.US, "%.2f detik", res.deltaT))
+            SummaryRow("Umur Hilal Saat Maghrib", " hari")
+        }
+    }
+
+    // 3. Waktu Maghrib & Hilal
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.Info, title = "3. Waktu Maghrib & Terbenam Bulan")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SummaryRow("Ghurub / Matahari Terbenam", res.ghurubSun)
+            SummaryRow("Terbenamnya Bulan (Moonset)", res.ghurubMoon)
+            SummaryRow("Selisih Waktu (Lama Hilal)", res.bestTimeStr)
+            SummaryRow("JDE Saat Matahari Terbenam", res.saatPerhitunganStr)
+        }
+    }
+
+    // 4. Ketinggian Hilal
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.ExpandLess, title = "4. Ketinggian Hilal")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            
+            Text("Tinggi Geosentris (Pusat Bumi)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+            SummaryRow("Ketinggian Hakiki (Pusat piringan)", res.altGeoBulanStr)
+            
+            Text("Tinggi Toposentris (Hakiki Permukaan Bumi)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+            SummaryRow("Piringan Atas (Upper Limb)", res.altTopoBulanAtasStr, isNegativeRed = res.altTopoBulanAtasStr.contains("-"))
+            SummaryRow("Pusat (Center)", res.altTopoBulanTengahStr, isNegativeRed = res.altTopoBulanTengahStr.contains("-"))
+            SummaryRow("Piringan Bawah (Lower Limb)", res.altTopoBulanBawahStr, isNegativeRed = res.altTopoBulanBawahStr.contains("-"))
+            
+            Text("Tinggi Mar'i (Apparent / Terlihat)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+            SummaryRow("Piringan Atas (Upper Limb)", res.altMariBulanAtasStr, isNegativeRed = res.altMariBulanAtasStr.contains("-"))
+            SummaryRow("Pusat (Center)", res.altMariBulanTengahStr, isNegativeRed = res.altMariBulanTengahStr.contains("-"))
+            SummaryRow("Piringan Bawah (Lower Limb)", res.altMariBulanBawahStr, isNegativeRed = res.altMariBulanBawahStr.contains("-"))
+        }
+    }
+
+    // 5. Elongasi & Iluminasi
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.ExpandMore, title = "5. Sudut Elongasi & Fraksi Cahaya")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SummaryRow("Elongasi Geosentris", res.elongasiGeoStr)
+            SummaryRow("Elongasi Toposentris (Hakiki)", res.elongasiTopoStr)
+            SummaryRow("Fraksi Iluminasi (Cahaya)", res.illumination)
+            SummaryRow("Lebar Sabit (Crescent Width)", res.lebarSabitStr)
+            SummaryRow("Nilai q Yallop / q Odeh", res.rangeQOdehStr + " / " + res.rangeQOdehStr)
+        }
+    }
+
+    // 6. Posisi Benda Langit
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.MyLocation, title = "6. Posisi Ekliptika & Ekuatorial")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            
+            Text("Bulan (Moon)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 4.dp))
+            SummaryRow("Azimut Bulan", res.azBulanStr)
+            SummaryRow("Bujur Ekliptika", res.bujurBulanStr)
+            SummaryRow("Lintang Ekliptika", res.lintangBulanStr)
+            SummaryRow("Asensio Rekta (RA)", res.raBulanStr)
+            SummaryRow("Deklinasi", res.decBulanStr)
+            
+            Text("Matahari (Sun)", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+            SummaryRow("Azimut Matahari", res.azMatahariStr)
+            SummaryRow("Bujur Ekliptika", res.bujurMatahariStr)
+            SummaryRow("Lintang Ekliptika", res.lintangMatahariStr)
+            SummaryRow("Asensio Rekta (RA)", res.raMatahariStr)
+            SummaryRow("Deklinasi", res.decMatahariStr)
+        }
+    }
+
+    // 7. Data Teknis Lainnya
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(icon = Icons.Default.Info, title = "7. Parameter Fisik")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            SummaryRow("Jarak Bumi - Bulan", res.jarakBumiBulanStr)
+            SummaryRow("Semi-Diameter (SD)", res.semidiameter)
+            SummaryRow("Horizontal Parallax (HP)", res.hpBulanStr)
+            SummaryRow("Azimut Bulan Terbenam", res.arahTerbenamBulanStr)
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    }
+}
+

@@ -1,4 +1,4 @@
-﻿package com.falak.falakpro.ui
+package com.falak.falakpro.ui
 
 import android.content.Context
 import android.print.PrintAttributes
@@ -7,8 +7,12 @@ import android.util.Base64
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -19,11 +23,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import com.falak.falakpro.R
 import com.falak.falakpro.premium.*
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +52,12 @@ fun DataFalakScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) {
+            AstroAssetPreloader.ensureCore(context)
+        }
+    }
+
     var year by remember { mutableStateOf("2026") }
     var day by remember { mutableStateOf("17") }
     
@@ -57,9 +71,12 @@ fun DataFalakScreen(
     var activeMode by remember { mutableStateOf(0) } // 0: Ephemeris, 1: Almanak Nautical
     
     var isLoading by remember { mutableStateOf(false) }
+    var isPrinting by remember { mutableStateOf(false) }
     var ephemerisData by remember { mutableStateOf<EphemerisGenerator.DayEphemeris?>(null) }
     
+    // almanacDataList = 1 hari untuk layar; almanacPrintData = 3 hari untuk PDF
     var almanacDataList by remember { mutableStateOf<List<EphemerisGenerator.DayEphemeris>?>(null) }
+    var almanacPrintData by remember { mutableStateOf<List<EphemerisGenerator.DayEphemeris>?>(null) }
     var moonHiResData by remember { mutableStateOf<List<List<AlmanacGenerator.MoonPoint>>>(emptyList()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     
@@ -174,53 +191,8 @@ fun DataFalakScreen(
                             
                             val result = withContext(Dispatchers.Default) {
                                 runCatching {
-                                context.assets.open("mpp02_core.bin").use { ElpDataProvider.initialize(it) }
-                                context.assets.open("earth_vsop87d.bin").use { Vsop87SolarEngine.initialize(it) }
-
-                                if (activeMode == 0) {
-                                    val data = EphemerisGenerator.computeDay(y, m, dVal, context)
-                                        DataFalakResult.Ephemeris(data)
-                                } else {
-                                    val jd1 = Julian.fromCalendar(y, m, dVal.toDouble())
-                                        val date1 = Julian.toCalendar(jd1)
-                                        val date2 = Julian.toCalendar(jd1 + 1.0)
-                                        val date3 = Julian.toCalendar(jd1 + 2.0)
-                                        
-                                        val data1 = EphemerisGenerator.computeDay(date1.year, date1.month, date1.day, context)
-                                        val data2 = EphemerisGenerator.computeDay(date2.year, date2.month, date2.day, context)
-                                        val data3 = EphemerisGenerator.computeDay(date3.year, date3.month, date3.day, context)
-                                        val almanacDays = listOf(data1, data2, data3)
-                                        
-                                        val elpMoon = ElpFactory.createMoon(context)
-                                        val earth = VsopFactory.createEarth(context)
-                                        val nutEngine = NutationIAU2000A(context)
-                                        val hiResData = mutableListOf<List<AlmanacGenerator.MoonPoint>>()
-                                        
-                                        for (dayOff in 0..2) {
-                                            val dayPoints = mutableListOf<AlmanacGenerator.MoonPoint>()
-                                            val baseJd = jd1 + dayOff.toDouble()
-                                            for (step in 0..48) {
-                                                val hourFrac = step * 0.5
-                                                val jdStep = baseJd + hourFrac / 24.0
-                                                val jdeStep = jdStep + DeltaT.estimate(y.toDouble()) / 86400.0
-                                                
-                                                val moon = MoonEngine.compute(jdeStep, elpMoon, context)
-                                                val sun = SunEngine.compute(jdeStep, earth, context)
-                                                val nut = nutEngine.compute(jdeStep)
-                                                val gst = SiderealTime.apparentGreenwich(
-                                                    jdStep, Math.toDegrees(nut.deltaPsi) * 3600.0, sun.trueObliquity
-                                                )
-                                                val moonGha = Angle.normalizeDegrees(gst - moon.rightAscension)
-                                                val moonHp = Math.toDegrees(asin(6378.14 / moon.distanceKm))
-                                                dayPoints.add(AlmanacGenerator.MoonPoint(
-                                                    hour = hourFrac, dec = moon.declination, gha = moonGha, hp = moonHp
-                                                ))
-                                            }
-                                            hiResData.add(dayPoints)
-                                        }
-                                        DataFalakResult.Almanac(almanacDays, hiResData)
+                                    DataFalakCalculationService.compute(context, activeMode, y, m, dVal)
                                 }
-                            }
                             }
 
                             result.fold(
@@ -261,19 +233,42 @@ fun DataFalakScreen(
                 if ((activeMode == 0 && ephemerisData != null) || (activeMode == 1 && almanacDataList != null)) {
                     Button(
                         onClick = {
-                            printWebView?.let { webView ->
-                                val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
-                                val docName = if (activeMode == 0) "Ephemeris_${day}_${monthNames[selectedMonthIndex]}_${year}" else "NauticalAlmanac_${day}_${monthNames[selectedMonthIndex]}_${year}"
-                                val printAdapter = webView.createPrintDocumentAdapter(docName)
-                                printManager.print("$docName PDF", printAdapter, PrintAttributes.Builder().build())
+                            scope.launch {
+                                isPrinting = true
+                                val y = year.toIntOrNull() ?: 2026
+                                val m = selectedMonthIndex + 1
+                                val dVal = day.toIntOrNull() ?: 17
+                                // PDF untuk nautika selalu 3 hari
+                                val htmlForPrint = withContext(Dispatchers.Default) {
+                                    if (activeMode == 0) {
+                                        EphemerisGenerator.generateStandardHtml(ephemerisData!!, nuLogoDataUri)
+                                    } else {
+                                        val printResult = DataFalakCalculationService.compute3DaysForPrint(context, y, m, dVal)
+                                        almanacPrintData = printResult.days
+                                        moonHiResData = printResult.moonHiRes
+                                        AlmanacGenerator.generateAlmanacHtml(printResult.days, printResult.moonHiRes, nuLogoDataUri)
+                                    }
+                                }
+                                printWebView?.loadDataWithBaseURL(null, htmlForPrint, "text/html", "UTF-8", null)
+                                isPrinting = false
+                                printWebView?.let { webView ->
+                                    val printManager = context.getSystemService(Context.PRINT_SERVICE) as PrintManager
+                                    val docName = if (activeMode == 0) "Ephemeris_${day}_${monthNames[selectedMonthIndex]}_${year}" else "NauticalAlmanac_${day}_${monthNames[selectedMonthIndex]}_${year}"
+                                    val printAdapter = webView.createPrintDocumentAdapter(docName)
+                                    printManager.print("$docName PDF", printAdapter, PrintAttributes.Builder().build())
+                                }
                             }
                         },
                         modifier = Modifier.weight(1f).height(52.dp),
-                        enabled = !isLoading,
+                        enabled = !isLoading && !isPrinting,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = NuGold, contentColor = Color.White)
                     ) {
-                        Text("CETAK PDF", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        if (isPrinting) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("CETAK PDF", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
                     }
                 }
             }
@@ -302,18 +297,24 @@ fun DataFalakScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .background(MaterialTheme.colorScheme.surface)
                 ) {
+                    if (activeMode == 0) {
+                        EphemerisNativeView(ephemerisData!!)
+                    } else {
+                        AlmanacNativeView(almanacDataList!!)
+                    }
+
+                    // Invisible WebView solely for Print PDF Generation
                     val currentHtml = remember(ephemerisData, almanacDataList, moonHiResData, activeMode) {
                         if (activeMode == 0) {
                             EphemerisGenerator.generateStandardHtml(ephemerisData!!, nuLogoDataUri)
                         } else {
-                            AlmanacGenerator.generateAlmanacHtml(almanacDataList!!, moonHiResData)
+                            AlmanacGenerator.generateAlmanacHtml(almanacDataList!!, moonHiResData, nuLogoDataUri)
                         }
                     }
 
                     AndroidView(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.size(1.dp),
                         factory = { ctx ->
                             WebView(ctx).apply {
                                 settings.builtInZoomControls = true
@@ -340,7 +341,7 @@ fun DataFalakScreen(
     }
 }
 
-private sealed interface DataFalakResult {
+sealed interface DataFalakResult {
     data class Ephemeris(val data: EphemerisGenerator.DayEphemeris) : DataFalakResult
     data class Almanac(
         val days: List<EphemerisGenerator.DayEphemeris>,
@@ -431,7 +432,14 @@ object SunEngine {
     fun compute(jde: Double, earth: Any?, context: Context): SunPos {
         val s = Vsop87SolarEngine.compute(jde)
         val obliq = AstroDataUtils.calculateTrueObliquity(jde)
-        val eot = AstroSolarEngine.getEquationOfTime(jde) * 60.0 // in minutes
+        val nutation = AstroDataUtils.calculateNutation(jde)
+        
+        val t = (jde - 2451545.0) / 36525.0
+        var meanLongitude = 280.4664567 + 36000.7698277 * t + 0.00030322 * t * t
+        meanLongitude = AstroMath.mod(meanLongitude, 360.0)
+        val eotHours = (meanLongitude - s.ra + nutation.first * kotlin.math.cos(AstroMath.rad(obliq))) / 15.0
+        val eot = eotHours * 60.0 // in minutes
+        
         return SunPos(
             rightAscension = s.ra,
             declination = s.dec,
@@ -499,6 +507,7 @@ object EphemerisGenerator {
         val sunGha: Double,
         val sunDistAU: Double,
         val sunSd: Double,
+        val sunEqHorParallax: Double,
         val trueObliquity: Double,
         val eqOfTimeMins: Double, // in minutes
 
@@ -510,6 +519,7 @@ object EphemerisGenerator {
         val moonGha: Double,
         val moonHp: Double,
         val moonSd: Double,
+        val moonAppDist: Double,
         val moonBrightLimb: Double,
         val moonIllumPercent: Double, // 0 to 100
         val moonV: Double, // Nautical Almanac v factor
@@ -523,7 +533,7 @@ object EphemerisGenerator {
         val rows: List<EphemerisRow>
     )
 
-    private fun dmsRoundStr(deg: Double): String {
+    fun dmsRoundStr(deg: Double): String {
         val sign = if (deg < 0) "-" else ""
         val v = kotlin.math.abs(deg)
         val d = v.toInt()
@@ -541,7 +551,7 @@ object EphemerisGenerator {
         return String.format(Locale.US, "%s%02d° %02d' %02d\"", sign, finalD, finalM, finalS)
     }
 
-    private fun dmStr(deg: Double): String {
+    fun dmStr(deg: Double): String {
         val sign = if (deg < 0) "-" else ""
         val v = kotlin.math.abs(deg)
         val d = v.toInt()
@@ -554,20 +564,20 @@ object EphemerisGenerator {
         return String.format(Locale.US, "%s%02d° %02d'", sign, finalD, finalM)
     }
 
-    private fun msStr(deg: Double): String {
+    fun msStr(deg: Double): String {
         val totalSec = kotlin.math.abs(deg) * 3600.0
         val m = (totalSec / 60.0).toInt()
         val s = totalSec % 60.0
         return String.format(Locale.US, "%02d' %05.2f\"", m, s).replace('.', ',')
     }
 
-    private fun secStr(deg: Double): String {
+    fun secStr(deg: Double): String {
         val sign = if (deg < 0) "-" else ""
         val arcsec = kotlin.math.abs(deg) * 3600.0
         return String.format(Locale.US, "%s%04.2f\"", sign, arcsec).replace('.', ',')
     }
 
-    private fun eqtStr(mins: Double): String {
+    fun eqtStr(mins: Double): String {
         val sign = if (mins < 0) "-" else ""
         val a = kotlin.math.abs(mins)
         val m = kotlin.math.floor(a).toInt()
@@ -580,15 +590,15 @@ object EphemerisGenerator {
         return String.format(Locale.US, "%s%02dm %02ds", sign, finalM, finalS)
     }
 
-    private fun fracStr(f: Double): String {
+    fun fracStr(f: Double): String {
         return String.format(Locale.US, "%.4f", f).replace('.', ',')
     }
 
-    private fun distStr(d: Double): String {
+    fun distStr(d: Double): String {
         return String.format(Locale.US, "%.7f", d).replace('.', ',')
     }
 
-    private fun illumStr(p: Double): String {
+    fun illumStr(p: Double): String {
         return String.format(Locale.US, "%.2f%%", p).replace('.', ',')
     }
 
@@ -649,7 +659,11 @@ object EphemerisGenerator {
                 val moonD = (nextMoon.declination - moon.declination) * 60.0
 
                 val sunSd = (959.63 / sun.distanceAU) / 3600.0
-                val phase = MoonPhase.compute(jd, elpMoon, earth, context)
+                val sunEqHorParallax = (8.794 / 3600.0) / sun.distanceAU
+                val illum = LunarFunctions.moonIllumination(
+                    sun.rightAscension, sun.declination, sun.distanceAU,
+                    moon.rightAscension, moon.declination, moon.distanceKm
+                )
                 val moonHp = Math.toDegrees(asin(6378.14 / moon.distanceKm))
                 
                 val raS = Math.toRadians(sun.rightAscension)
@@ -675,6 +689,7 @@ object EphemerisGenerator {
                         sunGha = sunGha,
                         sunDistAU = sun.distanceAU,
                         sunSd = sunSd,
+                        sunEqHorParallax = sunEqHorParallax,
                         trueObliquity = sun.trueObliquity,
                         eqOfTimeMins = sun.equationOfTime,
                         
@@ -685,8 +700,9 @@ object EphemerisGenerator {
                         moonGha = moonGha,
                         moonHp = moonHp,
                         moonSd = moon.semiDiameterDeg,
+                        moonAppDist = moon.distanceKm,
                         moonBrightLimb = finalChi,
-                        moonIllumPercent = phase.illuminatedFraction * 100.0,
+                        moonIllumPercent = illum.illuminatedFraction * 100.0,
                         moonV = moonV,
                         moonD = moonD
                     )
@@ -1109,7 +1125,8 @@ object AlmanacGenerator {
 
     fun generateAlmanacHtml(
         days: List<EphemerisGenerator.DayEphemeris>,
-        moonHiRes: List<List<MoonPoint>> = emptyList() // 3 days of high-res data
+        moonHiRes: List<List<MoonPoint>> = emptyList(), // 3 days of high-res data
+        nuLogoDataUri: String = ""
     ): String {
         val sb = java.lang.StringBuilder()
 
@@ -1132,6 +1149,80 @@ object AlmanacGenerator {
                         padding: 0;
                         line-height: 1;
                     }
+                    
+                    .print-header {
+                        text-align: center;
+                        margin: 0 0 0.8mm 0;
+                    }
+                    .ornament-band {
+                        position: relative;
+                        height: 14mm;
+                        overflow: hidden;
+                        margin: 0 0 3mm 0;
+                        background:
+                            radial-gradient(circle at 5mm 5mm, transparent 2.1mm, #9c9c9c 2.2mm, #9c9c9c 2.55mm, transparent 2.65mm),
+                            radial-gradient(circle at 12mm 5mm, transparent 2.1mm, #9c9c9c 2.2mm, #9c9c9c 2.55mm, transparent 2.65mm),
+                            radial-gradient(circle at 8.5mm 10mm, transparent 2.1mm, #9c9c9c 2.2mm, #9c9c9c 2.55mm, transparent 2.65mm);
+                        background-size: 17mm 10mm;
+                    }
+                    .ornament-band::after {
+                        content: "";
+                        position: absolute;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        border-bottom: 0.45mm solid #9c9c9c;
+                    }
+                    .ornament-badge {
+                        position: absolute;
+                        left: 50%;
+                        top: 5mm;
+                        transform: translateX(-50%);
+                        min-width: 48mm;
+                        height: 9mm;
+                        box-sizing: border-box;
+                        background: #fff;
+                        border: 0.35mm solid #9c9c9c;
+                        border-radius: 6mm;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 1.5mm;
+                        padding: 0 4mm;
+                        color: #000;
+                        font-size: 7pt;
+                        font-weight: bold;
+                        white-space: nowrap;
+                    }
+                    .nu-logo {
+                        width: 5mm;
+                        height: 5mm;
+                        object-fit: contain;
+                        display: inline-block;
+                        margin: 0;
+                    }
+                    .nu-logo-fallback {
+                        width: 5mm;
+                        height: 5mm;
+                        margin: 0;
+                        border: 0.35mm solid #000;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 4pt;
+                        font-weight: bold;
+                    }
+                    .institution {
+                        font-family: 'Times New Roman', Times, serif;
+                        font-size: 10pt;
+                        font-weight: bold;
+                        letter-spacing: 0.2pt;
+                        text-transform: uppercase;
+                        text-align: center;
+                        margin: 0 0 2mm 0;
+                    }
+                    
                     .page-title {
                         text-align: right;
                         font-weight: bold;
@@ -1237,6 +1328,21 @@ object AlmanacGenerator {
                 </style>
             </head>
             <body>
+        """.trimIndent())
+
+        val logoHtml = if (nuLogoDataUri.isNotEmpty()) {
+            "<img src=\"$nuLogoDataUri\" alt=\"NU Logo\" class=\"nu-logo\">"
+        } else {
+            "<div class=\"nu-logo-fallback\">NU</div>"
+        }
+
+        sb.append("""
+            <div class="print-header">
+                <div class="ornament-band">
+                    <div class="ornament-badge">$logoHtml<span>Nautical Almanac ${days.firstOrNull()?.year ?: ""}</span></div>
+                </div>
+                <div class="institution">LEMBAGA FALAKIYAH PWNU JAWA BARAT</div>
+            </div>
         """.trimIndent())
 
         if (days.size >= 3) {
@@ -1655,4 +1761,394 @@ object AlmanacGenerator {
         return sb.toString()
     }
 }
+
+// ============================================================================
+// NATIVE COMPOSE UI – TAB-BASED (Matahari | Bulan)
+// ============================================================================
+
+// ─── Shared primitives ──────────────────────────────────────────────────────
+
+@Composable
+private fun DataTable(
+    headers: List<Pair<String, Int>>,   // label to width-dp
+    rows: List<List<String>>,
+    headerBg: Color,
+    headerTxt: Color,
+    evenBg: Color
+) {
+    Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        Column {
+            // header
+            Row(modifier = Modifier.background(headerBg)) {
+                headers.forEach { (label, w) ->
+                    Box(
+                        modifier = Modifier
+                            .width(w.dp)
+                            .border(0.5.dp, Color(0xFFBDBDBD))
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = headerTxt
+                        )
+                    }
+                }
+            }
+            // data rows
+            rows.forEachIndexed { idx, cells ->
+                val bg = if (idx % 2 == 0) evenBg else Color.White
+                Row(modifier = Modifier.background(bg)) {
+                    cells.forEachIndexed { ci, value ->
+                        val w = headers[ci].second
+                        Box(
+                            modifier = Modifier
+                                .width(w.dp)
+                                .border(0.5.dp, Color(0xFFE8E8E8))
+                                .padding(horizontal = 4.dp, vertical = 3.dp),
+                            contentAlignment = if (ci == 0) Alignment.Center else Alignment.CenterEnd
+                        ) {
+                            Text(
+                                text = value,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color(0xFF212121)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Ephemeris ───────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EphemerisNativeView(data: EphemerisGenerator.DayEphemeris) {
+    val gen = EphemerisGenerator
+    val monthNames = listOf("","Januari","Februari","Maret","April","Mei",
+        "Juni","Juli","Agustus","September","Oktober","November","Desember")
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Day header
+        Surface(color = Color(0xFF1B5E20), modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Ephemeris  ${data.day} ${monthNames[data.month]} ${data.year}",
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+        }
+
+        // Tab selector
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Color(0xFFF1F8E9),
+            contentColor = NuGreen
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("☀ Matahari", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("🌙 Bulan", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+        }
+
+        // Table content
+        val sunHeaders = listOf(
+            "Jam" to 36, "Ecl. Long." to 100, "Ecl. Lat." to 80,
+            "App. RA" to 100, "App. Dec" to 100,
+            "Dist. (AU)" to 96, "SD" to 76, "Obliquity" to 100, "Eq. of Time" to 80
+        )
+        val moonHeaders = listOf(
+            "Jam" to 36, "App. Long." to 100, "App. Lat." to 100,
+            "App. RA" to 100, "App. Dec" to 100,
+            "H.P." to 72, "SD" to 72, "Bright Limb" to 100, "Illumination" to 90
+        )
+
+        val sunRows = data.rows.map { r -> listOf(
+            "${r.hourUt}",
+            gen.dmsRoundStr(r.sunAppLong), gen.secStr(r.sunAppLat),
+            gen.dmsRoundStr(r.sunAppRa), gen.dmsRoundStr(r.sunAppDec),
+            gen.distStr(r.sunDistAU), gen.msStr(r.sunSd),
+            gen.dmsRoundStr(r.trueObliquity), gen.eqtStr(r.eqOfTimeMins)
+        )}
+        val moonRows = data.rows.map { r -> listOf(
+            "${r.hourUt}",
+            gen.dmsRoundStr(r.moonAppLong), gen.dmsRoundStr(r.moonAppLat),
+            gen.dmsRoundStr(r.moonAppRa), gen.dmsRoundStr(r.moonAppDec),
+            gen.dmStr(r.moonHp), gen.msStr(r.moonSd),
+            gen.dmsRoundStr(r.moonBrightLimb), gen.illumStr(r.moonIllumPercent)
+        )}
+
+        Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            if (selectedTab == 0) {
+                DataTable(
+                    headers = sunHeaders, rows = sunRows,
+                    headerBg = Color(0xFFE8F5E9), headerTxt = Color(0xFF1B5E20),
+                    evenBg = Color(0xFFF9FBE7)
+                )
+            } else {
+                DataTable(
+                    headers = moonHeaders, rows = moonRows,
+                    headerBg = Color(0xFFE3F2FD), headerTxt = Color(0xFF0D47A1),
+                    evenBg = Color(0xFFF0F4FF)
+                )
+            }
+        }
+    }
+}
+
+// ─── Nautical Almanac ────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AlmanacNativeView(days: List<EphemerisGenerator.DayEphemeris>) {
+    // Hanya 1 hari untuk layar
+    val dayData = days.firstOrNull() ?: return
+    val monthNames = listOf("","JAN","FEB","MAR","APR","MAY","JUN",
+        "JUL","AUG","SEP","OCT","NOV","DEC")
+
+    // formatter helpers (sama dengan generateNauticalHtml)
+    fun ghaStr(deg: Double): String {
+        val v = Angle.normalizeDegrees(deg)
+        val d = v.toInt(); val m = (v - d) * 60.0
+        return String.format(Locale.US, "%03d° %04.1f'", d, m).replace('.', ',')
+    }
+    fun decStr(deg: Double): String {
+        val sign = if (deg >= 0) "N" else "S"
+        val v = kotlin.math.abs(deg); val d = v.toInt(); val m = (v - d) * 60.0
+        return String.format(Locale.US, "%s %02d° %04.1f'", sign, d, m).replace('.', ',')
+    }
+    fun fStr(f: Double): String = String.format(Locale.US, "%+.1f", f).replace('.', ',')
+    fun hpStr(deg: Double): String = String.format(Locale.US, "%04.1f'", deg * 60.0).replace('.', ',')
+
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Day header
+        Surface(color = Color(0xFF0D47A1), modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Almanak Nautika  ${dayData.day} ${monthNames[dayData.month]} ${dayData.year}",
+                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            )
+        }
+
+        // Tab selector
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Color(0xFFE3F2FD),
+            contentColor = Color(0xFF0D47A1)
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("☀ Matahari", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("🌙 Bulan", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+            Tab(
+                selected = selectedTab == 2,
+                onClick = { selectedTab = 2 },
+                text = { Text("🌅 Terbit/Benam", fontWeight = FontWeight.Bold, fontSize = 12.sp) }
+            )
+        }
+
+        // Build rows for 24 hours
+        val sunHeaders = listOf("UT" to 36, "GHA" to 92, "DEC." to 100)
+        val moonHeaders = listOf("UT" to 36, "GHA" to 92, "v" to 44, "DEC." to 100, "d" to 44, "H.P." to 60)
+
+        val sunRows  = (0..23).map { i ->
+            val r = dayData.rows[i]
+            listOf(String.format(Locale.US, "%02d", r.hourUt), ghaStr(r.sunGha), decStr(r.sunAppDec))
+        }
+        val moonRows = (0..23).map { i ->
+            val r = dayData.rows[i]
+            listOf(
+                String.format(Locale.US, "%02d", r.hourUt),
+                ghaStr(r.moonGha), fStr(r.moonV), decStr(r.moonAppDec), fStr(r.moonD), hpStr(r.moonHp)
+            )
+        }
+
+        // --- Compute Twilight & Sunrise/Sunset (for Tab 2) ---
+        val twilightHeaders = listOf("Lat" to 36, "Naut." to 54, "Civil" to 54, "Sunrise" to 58, "Sunset" to 58, "Civil" to 54, "Naut." to 54)
+        
+        val latitudes = listOf(
+            72.0, 70.0, 68.0, 66.0, 64.0, 62.0, 60.0, 58.0, 56.0, 54.0, 52.0, 50.0,
+            45.0, 40.0, 35.0, 30.0, 20.0, 10.0, 0.0, -10.0, -20.0, -30.0, -35.0,
+            -40.0, -45.0, -50.0, -52.0, -54.0, -56.0, -58.0, -60.0
+        )
+        
+        fun computeH(lat: Double, decDeg: Double, h0: Double): Double {
+            val l = Math.toRadians(lat)
+            val d = Math.toRadians(decDeg)
+            val ho = Math.toRadians(h0)
+            val cosH = (Math.sin(ho) - Math.sin(l) * Math.sin(d)) / (Math.cos(l) * Math.cos(d))
+            if (cosH < -1.0) return -1.0
+            if (cosH > 1.0) return -2.0
+            return Math.toDegrees(Math.acos(cosH)) / 15.0
+        }
+        fun interpSunDec(hour: Double): Double {
+            val h = hour.coerceIn(0.0, 23.0)
+            val h0i = h.toInt().coerceIn(0, 22)
+            val frac = h - h0i
+            val dec0 = dayData.rows[h0i].sunAppDec
+            val dec1 = dayData.rows[h0i + 1].sunAppDec
+            return dec0 + (dec1 - dec0) * frac
+        }
+        fun lmtRiseSet(lat: Double, h0: Double, eqtMins: Double): Pair<Double, Double> {
+            val transit = 12.0 - eqtMins / 60.0
+            val H1 = computeH(lat, dayData.rows[12].sunAppDec, h0)
+            if (H1 < 0) return Pair(H1, H1)
+            val riseEst = transit - H1
+            val setEst = transit + H1
+            val decRise = interpSunDec(riseEst)
+            val decSet = interpSunDec(setEst)
+            val H_rise = computeH(lat, decRise, h0)
+            val H_set = computeH(lat, decSet, h0)
+            if (H_rise < 0 || H_set < 0) return Pair(H_rise, H_set)
+            return Pair(transit - H_rise, transit + H_set)
+        }
+        fun formatHM(hours: Double): String {
+            if (hours < 0 || hours >= 24) return "-:-"
+            val h = hours.toInt()
+            val m = kotlin.math.round((hours - h) * 60.0).toInt()
+            var finalH = h
+            var finalM = m
+            if (finalM >= 60) { finalH++; finalM -= 60 }
+            if (finalH >= 24) return "-:-"
+            return String.format(Locale.US, "%02d:%02d", finalH, finalM)
+        }
+        
+        val midEqT = dayData.rows[12].eqOfTimeMins
+        val twilightRows = latitudes.map { lat ->
+            val srss = lmtRiseSet(lat, -0.8333, midEqT)
+            val civ = lmtRiseSet(lat, -6.0, midEqT)
+            val naut = lmtRiseSet(lat, -12.0, midEqT)
+            val latStr = if (lat == 0.0) "0" else lat.toInt().toString()
+            listOf(
+                latStr,
+                formatHM(naut.first), formatHM(civ.first), formatHM(srss.first),
+                formatHM(srss.second), formatHM(civ.second), formatHM(naut.second)
+            )
+        }
+
+
+        // Footer
+        val eq0  = dayData.rows[0].eqOfTimeMins
+        val eq12 = dayData.rows[12].eqOfTimeMins
+        val mpMin = (12 * 60 - eq12).toInt()
+        val mpStr = String.format(Locale.US, "%02d:%02d UT", mpMin / 60, mpMin % 60)
+        fun eqStr(m: Double): String {
+            val s = if(m<0)"-" else ""
+            val am = kotlin.math.abs(m)
+            val mm = kotlin.math.floor(am).toInt()
+            val ss = kotlin.math.round((am-mm)*60.0).toInt()
+            var fm=mm; var fs=ss
+            if(fs>=60){ fs-=60; fm+=1 }
+            return String.format(Locale.US, "%s%02dm %02ds", s, fm, fs)
+        }
+
+        Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Column {
+                when (selectedTab) {
+                    0 -> {
+                        DataTable(
+                            headers = sunHeaders, rows = sunRows,
+                            headerBg = Color(0xFFFFF9C4), headerTxt = Color(0xFF5D4037),
+                            evenBg = Color(0xFFFFFDE7)
+                        )
+                    }
+                    1 -> {
+                        DataTable(
+                            headers = moonHeaders, rows = moonRows,
+                            headerBg = Color(0xFFE3F2FD), headerTxt = Color(0xFF0D47A1),
+                            evenBg = Color(0xFFF0F4FF)
+                        )
+                    }
+                    2 -> {
+                        DataTable(
+                            headers = twilightHeaders, rows = twilightRows,
+                            headerBg = Color(0xFFFFF3E0), headerTxt = Color(0xFFE65100),
+                            evenBg = Color(0xFFFFF8E1)
+                        )
+                    }
+                }
+                
+                // Footer summary (always visible)
+                Surface(
+                    color = Color(0xFFF5F5F5),
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "EqT 00h: ${EphemerisGenerator.eqtStr(eq0)}   " +
+                               "EqT 12h: ${EphemerisGenerator.eqtStr(eq12)}   " +
+                               "Sun Mer. Pass: $mpStr",
+                        fontSize = 9.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF555555),
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AstroDataRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, fontSize = 11.sp, color = Color.Gray)
+        Text(text = value, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color.DarkGray)
+    }
+}
+
+private fun fmtDMS(deg: Double): String {
+    val isNeg = deg < 0
+    val v = kotlin.math.abs(deg)
+    var d = kotlin.math.floor(v).toInt()
+    val mFull = (v - d) * 60.0
+    var m = kotlin.math.floor(mFull).toInt()
+    var s = kotlin.math.round((mFull - m) * 60.0).toInt()
+    if (s >= 60) { s = 0; m += 1 }
+    if (m >= 60) { m = 0; d += 1 }
+    return String.format(Locale.US, "%s%02d° %02d' %02d\"", if (isNeg) "-" else "", d, m, s)
+}
+
+private fun fmtTime(hours: Double): String {
+    if (hours.isNaN() || hours < 0) return "--:--"
+    val h = kotlin.math.abs(hours)
+    var d = kotlin.math.floor(h).toInt()
+    var m = kotlin.math.round((h - d) * 60.0).toInt()
+    if (m >= 60) { m = 0; d += 1 }
+    return String.format(Locale.US, "%02d:%02d", d % 24, m)
+}
+
+private fun fmtEoT(mins: Double): String {
+    if (mins.isNaN()) return "--:--"
+    val sign = if (mins < 0) "-" else "+"
+    val a = kotlin.math.abs(mins)
+    val m = kotlin.math.floor(a).toInt()
+    val s = kotlin.math.round((a - m) * 60.0).toInt()
+    var finalS = s; var finalM = m
+    if (finalS >= 60) { finalS -= 60; finalM += 1 }
+    return String.format(Locale.US, "%s%02d:%02d", sign, finalM, finalS)
+}
+
 

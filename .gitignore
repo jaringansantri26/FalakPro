@@ -21,3 +21,10 @@ local.properties
 
 # Logs
 *.log
+
+# Sensitive & Secret files (Keystores, Credentials, API keys)
+falakpro-release-key
+google-services.json
+*.jks
+*.keystore
+

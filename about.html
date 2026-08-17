@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tentang FalakPro – Islamic Astronomy Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0F6D5E;
+      --primary-dark: #084C41;
+      --primary-light: #E6F4F1;
+      --accent-gold: #D4AF37;
+      --accent-gold-light: #FDF8E7;
+      --bg-body: #0F172A;
+      --card-bg: #1E293B;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border-color: rgba(255, 255, 255, 0.1);
+      --radius-sm: 12px;
+      --radius-md: 18px;
+      --radius-lg: 28px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Hero Banner ── */
+    .hero {
+      position: relative;
+      padding: 90px 24px 70px;
+      text-align: center;
+      background: radial-gradient(circle at 50% -20%, rgba(15, 109, 94, 0.6) 0%, transparent 70%),
+                  radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.15) 0%, transparent 50%),
+                  #0B1120;
+      border-bottom: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: 
+        radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.7), rgba(0,0,0,0)),
+        radial-gradient(1.5px 1.5px at 90px 40px, #ffd54f, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0));
+      background-repeat: repeat;
+      background-size: 200px 200px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .hero-container {
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .app-icon-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 96px; height: 96px;
+      background: linear-gradient(135deg, rgba(15, 109, 94, 0.8), rgba(212, 175, 55, 0.3));
+      border: 2px solid var(--accent-gold);
+      border-radius: 28px;
+      margin-bottom: 24px;
+      font-size: 46px;
+      box-shadow: 0 16px 36px rgba(15, 109, 94, 0.4), 0 0 20px rgba(212, 175, 55, 0.2);
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, var(--accent-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .hero p.tagline {
+      font-size: 1.2rem;
+      color: #CBD5E1;
+      max-width: 680px;
+      margin: 0 auto 24px;
+      font-weight: 400;
+    }
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--border-color);
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      color: #E2E8F0;
+      backdrop-filter: blur(8px);
+    }
+    .badge.gold {
+      border-color: rgba(212, 175, 55, 0.5);
+      color: var(--accent-gold);
+      background: rgba(212, 175, 55, 0.1);
+    }
+
+    /* ── Language Switcher ── */
+    .tab-bar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .tab-container {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      padding: 8px 16px;
+      gap: 8px;
+    }
+    .tab-btn {
+      flex: 1;
+      max-width: 220px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #FFFFFF;
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 16px rgba(15, 109, 94, 0.4);
+    }
+
+    /* ── Main Content Container ── */
+    main {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 50px 20px 90px;
+    }
+    .lang-section { display: none; }
+    .lang-section.active { display: block; animation: fadeIn 0.35s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .lang-section[data-lang="ar"] {
+      direction: rtl;
+      text-align: right;
+      font-family: 'Amiri', 'Plus Jakarta Sans', serif;
+      font-size: 1.2rem;
+    }
+    .lang-section[data-lang="ar"] h2, .lang-section[data-lang="ar"] h3 {
+      font-family: 'Amiri', serif;
+    }
+
+    /* ── Cards & Layout ── */
+    .glass-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .glass-card:hover {
+      border-color: rgba(212, 175, 55, 0.4);
+    }
+    .section-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .icon-square {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, rgba(15, 109, 94, 0.3), rgba(212, 175, 55, 0.15));
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--accent-gold);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      letter-spacing: -0.3px;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent-gold);
+      margin: 20px 0 10px;
+    }
+    p {
+      color: #CBD5E1;
+      margin-bottom: 14px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      color: #CBD5E1;
+      margin-bottom: 8px;
+    }
+    .lang-section[data-lang="ar"] ul {
+      padding-left: 0;
+      padding-right: 24px;
+    }
+
+    /* ── Features Grid ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 18px;
+      margin-top: 16px;
+    }
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 22px;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.06);
+      transform: translateY(-2px);
+    }
+    .feature-card h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feature-card p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      margin-bottom: 0;
+    }
+
+    /* ── Engine Specs Table ── */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+    td { color: #E2E8F0; }
+    .lang-section[data-lang="ar"] th, .lang-section[data-lang="ar"] td {
+      text-align: right;
+    }
+
+    /* Developer Card */
+    .dev-profile {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+      background: linear-gradient(135deg, rgba(15, 109, 94, 0.2), rgba(30, 41, 59, 0.8));
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      margin-top: 18px;
+    }
+    .dev-avatar {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--accent-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    .dev-info h3 { margin: 0 0 4px; color: #FFFFFF; font-size: 1.25rem; }
+    .dev-info p.role { color: var(--accent-gold); font-size: 0.92rem; font-weight: 600; margin-bottom: 8px; }
+    .dev-info p.contact { font-size: 0.9rem; color: #CBD5E1; margin: 0; }
+
+    /* Footer */
+    footer {
+      background: #090D16;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      padding: 44px 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--accent-gold); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 2.1rem; }
+      .glass-card { padding: 22px 18px; }
+      .dev-profile { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-container">
+      <div class="app-icon-wrap">🌙</div>
+      <h1>FalakPro</h1>
+      <p class="tagline">The Ultimate Islamic Astronomy, Calendrical Calculation & Professional Falak Observation Suite</p>
+      <div class="hero-badges">
+        <span class="badge gold">✨ VSOP87D & ELP/MPP02 Engine</span>
+        <span class="badge">🔭 AR Kamera Rukyat Hilal</span>
+        <span class="badge">🧭 Presisi Ellipsoid WGS84 Kiblat</span>
+        <span class="badge">🕌 Kalender Terpadu 4-in-1</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Language Selector ── -->
+  <div class="tab-bar">
+    <div class="tab-container">
+      <button class="tab-btn active" onclick="switchLang('id')">🇮🇩 Bahasa Indonesia</button>
+      <button class="tab-btn" onclick="switchLang('en')">🇬🇧 English</button>
+      <button class="tab-btn" onclick="switchLang('ar')">🇸🇦 العربية</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- ========================================================================= -->
+    <!-- BAHASA INDONESIA -->
+    <!-- ========================================================================= -->
+    <div id="section-id" class="lang-section active" data-lang="id">
+      
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">📖</div>
+          <h2>Tentang Aplikasi FalakPro</h2>
+        </div>
+        <p>
+          <strong>FalakPro</strong> adalah aplikasi astronomi Islam dan ilmu falak profesional yang dikembangkan oleh <strong>Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ulama (PWNU) Jawa Barat</strong>.
+        </p>
+        <p>
+          Aplikasi ini dirancang sebagai platform terpadu berakurasi tinggi untuk memenuhi kebutuhan hisab, rukyat, kalender astronomis, penentuan arah kiblat, waktu salat, gerhana, hingga pengamatan hilal modern bagi kalangan pesantren, akademisi, lembaga hisab rukyat, kementerian agama, peneliti, dan umat Islam luas.
+        </p>
+        <p>
+          FalakPro memadukan <strong>Astronomi Modern Komputasional</strong> (teori VSOP87D, ELP/MPP02, dan Jean Meeus Astronomical Algorithms) dengan khazanah <strong>Hisab Turats Klasik</strong> (seperti metode kitab <em>Ad-Durr al-Aniq fi Ilm al-Falak</em> dan <em>Sullamun Nayyirain</em>) dalam satu antarmuka yang elegan, cepat, dan 100% offline.
+        </p>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">⚡</div>
+          <h2>Fitur Unggulan FalakPro</h2>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <h4>🌙 Hisab Awal Bulan & Peta Hilal</h4>
+            <p>Perhitungan komprehensif Ijtimak, tinggi hilal mar'i/hakiki, elongasi, umur, fraksi iluminasi, lebar sabit, dan peta visibilitas global interaktif (MABIMS 3°/6.4°, Wujudul Hilal, Odeh, Yallop, Danjon, Turki/KGHT).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📷 Kamera Rukyat Hilal (AR)</h4>
+            <p>Pengamatan hilal berbantu Augmented Reality, pengunci posisi sensor (*Lock Sensor*), penggaris koordinat derajat langit, dan pelacak matahari/bulan real-time.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🧭 Kompas & Kamera Kiblat Presisi</h4>
+            <p>Penentuan arah kiblat berbasis rumus Great Circle, Ellipsoid WGS84, dan Vincenty Formula dilengkapi fitur kamera AR serta Rashdul Qiblah harian & tahunan.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🕌 Jadwal Salat & Imsakiyah</h4>
+            <p>Jadwal salat akurat dengan koreksi elevasi pengamat, berbagai kriteria hisab internasional (LFNU, Kemenag, MWL, ISNA, Ummul Qura), serta ekspor PDF A4 siap cetak.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🗓️ Kalender Terpadu 4-in-1</h4>
+            <p>Sinkronisasi kalender Masehi, Hijriyah, Saka Jawa (lengkap dengan 5 Pasaran), dan Caka Sunda (Pancawara, Sadwara, dan Wuku).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>☀️🌕 Gerhana Matahari & Bulan</h4>
+            <p>Kalkulasi presisi waktu kontak gerhana (U1, U2, Puncak, U3, U4), magnitudo, tipologi gerhana, dan data geometri bayangan umbra/penumbra.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📊 Data Falak & Ephemeris</h4>
+            <p>Tabel ephemeris harian/jam-jaman Matahari & Bulan (RA, Deklinasi, GHA, LHA, EoT, Obliquity, GAST, Delta T) dengan ekspor spreadsheet Excel (.xlsx).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🧮 Kalkulator Ilmiah Falak</h4>
+            <p>Kalkulator trigonometri astronomis dengan input pecahan derajat-menit-detik (DMS) dan konversi waktu astronomis.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">🔬</div>
+          <h2>Standar Akurasi & Basis Algoritma</h2>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Komponen</th>
+                <th>Model Algoritma</th>
+                <th>Toleransi / Acuan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Posisi Matahari</td>
+                <td>VSOP87D Planetary Solution</td>
+                <td>NASA JPL Horizons / IMCCE Paris (&lt; 0.2″)</td>
+              </tr>
+              <tr>
+                <td>Posisi Bulan</td>
+                <td>ELP/MPP02 Lunar Theory (DE405)</td>
+                <td>NASA JPL Horizons (&lt; 2.0″)</td>
+              </tr>
+              <tr>
+                <td>Nutasi &amp; Presesi</td>
+                <td>IAU 2000A / IAU 2006</td>
+                <td>IERS Conventions</td>
+              </tr>
+              <tr>
+                <td>Refraksi Atmosfer</td>
+                <td>Bennett's Atmospheric Formula</td>
+                <td>Jean Meeus Astronomical Algorithms Ch. 16</td>
+              </tr>
+              <tr>
+                <td>Hisab Turats</td>
+                <td>Ad-Durr al-Aniq &amp; Sullamun Nayyirain</td>
+                <td>KH. Ahmad Ghozali Muhammad Fathullah</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">🏛️</div>
+          <h2>Tim Pengembang & Kontak</h2>
+        </div>
+        <p>
+          Aplikasi ini dikembangkan dan dipelihara secara berkelanjutan oleh:
+        </p>
+
+        <div class="dev-profile">
+          <div class="dev-avatar">👨‍💻</div>
+          <div class="dev-info">
+            <h3>Asep Jalaludin Bakrie</h3>
+            <p class="role">Lead Developer, Algorist &amp; System Architect</p>
+            <p class="contact">
+              🏛️ <strong>Lembaga Falakiyah PWNU Jawa Barat</strong><br>
+              📍 Bandung, Jawa Barat, Indonesia<br>
+              📞 WhatsApp / Telp: <strong>+62 817-2238-56</strong><br>
+              🌐 Portal Resmi: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ENGLISH -->
+    <!-- ========================================================================= -->
+    <div id="section-en" class="lang-section" data-lang="en">
+      
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">📖</div>
+          <h2>About FalakPro</h2>
+        </div>
+        <p>
+          <strong>FalakPro</strong> is a premier Islamic astronomy, calendrical computation, and celestial observation suite developed by <strong>Lembaga Falakiyah PWNU West Java (Indonesia)</strong>.
+        </p>
+        <p>
+          Engineered for Islamic scholars, astronomers, academic institutions, mosques, and enthusiasts worldwide, FalakPro provides a unified and offline-first platform for precision ephemeris generation, Hijri calendar reckoning, Qibla determination, eclipse prediction, and augmented reality crescent sighting.
+        </p>
+        <p>
+          The application uniquely synthesizes <strong>Modern High-Precision Astrophysics</strong> (VSOP87D solar theory, ELP/MPP02 lunar theory, IAU 2000A nutation, and Jean Meeus algorithms) with revered <strong>Classical Islamic Astronomical Traditions</strong> (such as <em>Ad-Durr al-Aniq</em> and <em>Sullamun Nayyirain</em>).
+        </p>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">⚡</div>
+          <h2>Core Features</h2>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <h4>🌙 Hijri Crescent & Visibility Maps</h4>
+            <p>Instant computation of Conjunction, Topocentric/Geocentric Crescent Altitude, Elongation, Crescent Width, Moon Age, Illumination, and interactive global visibility zones (MABIMS, Wujudul Hilal, Odeh, Yallop, Danjon, Turkey/KGHT).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📷 AR Crescent Rukyat Camera</h4>
+            <p>Augmented Reality horizon alignment, real-time Sun and Moon tracking, 3D celestial coordinate ruler grid, and sensor orientation locking for telescope mounting.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🧭 Precision Qibla Finder</h4>
+            <p>Multi-model Qibla calculation (Spherical, WGS84 Ellipsoid, and Vincenty geodesic formula) with live camera AR guidance and daily solar shadow (Rashdul Qiblah) data.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🕌 Prayer Times & Imsakiyah</h4>
+            <p>Accurate prayer times adjusted for observer elevation and dip of horizon, configurable international conventions (LFNU, Kemenag, MWL, ISNA, Ummul Qura), and A4 PDF printing.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🗓️ Unified 4-in-1 Calendar</h4>
+            <p>Seamless synchronization between Gregorian, Hijri, Javanese Saka (Pasaran cycles), and Sundanese Caka systems.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>☀️🌕 Solar & Lunar Eclipses</h4>
+            <p>Rigorous contact timing (U1, U2, Max, U3, U4), magnitude, typology, and umbral/penumbral shadow geometry for any global coordinate.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📊 Full Astronomical Ephemeris</h4>
+            <p>Daily and hourly astronomical ephemeris for the Sun and Moon with one-click export to formatted Excel spreadsheets (.xlsx).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🧮 Astronomical Calculator</h4>
+            <p>DMS angle conversion, fractional time calculations, and specialized trigonometric functions.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">🏛️</div>
+          <h2>Development Team</h2>
+        </div>
+        <div class="dev-profile">
+          <div class="dev-avatar">👨‍💻</div>
+          <div class="dev-info">
+            <h3>Asep Jalaludin Bakrie</h3>
+            <p class="role">Lead Developer &amp; Astronomical Software Architect</p>
+            <p class="contact">
+              🏛️ <strong>Lembaga Falakiyah PWNU West Java</strong><br>
+              📍 Bandung, West Java, Indonesia<br>
+              📞 Phone / WhatsApp: <strong>+62 817-2238-56</strong><br>
+              🌐 Official Website: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ARABIC (العربية) -->
+    <!-- ========================================================================= -->
+    <div id="section-ar" class="lang-section" data-lang="ar">
+      
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">📖</div>
+          <h2>عن تطبيق فلك برو (FalakPro)</h2>
+        </div>
+        <p>
+          <strong>فلك برو (FalakPro)</strong> هو تطبيق رائد ومتخصص في علم الفلك الإسلامي والحسابات الفلكية ورصد الأهلة، تم تطويره بواسطة <strong>مؤسسة الفلكية التابعة لـ PWNU جاوة الغربية، إندونيسيا</strong>.
+        </p>
+        <p>
+          صُمم التطبيق ليكون منصة متكاملة عالية الدقة تلبي احتياجات المعاهد الإسلامية والعلماء والباحثين والمؤسسات الدينية في حساب التقاويم وتحديد مواقيت الصلاة واتجاه القبلة والتنبؤ بالكسوف والخسوف ورصد الهلال.
+        </p>
+        <p>
+          يجمع التطبيق بين <strong>أحدث النظريات الفلكية العالمية</strong> (مثل VSOP87D و ELP/MPP02 ونظريات جان ميوس) و<strong>كتب الفلك الإسلامي التراثية المعتمدة</strong> (مثل كتاب "الدر الأنيق في علم الفلك" وكتاب "سلم النيرين").
+        </p>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">⚡</div>
+          <h2>أبرز مميزات التطبيق</h2>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-card">
+            <h4>🌙 حساب أوائل الشهور وخريطة الهلال</h4>
+            <p>حساب لحظة الاقتران، ارتفاع الهلال، الاستطالة، سمك الهلال، عمر القمر، وخريطة تفاعلية لمعايير الرؤية العالمية (MABIMS، عودة، يالوب، دانجون، تركيا/KGHT).</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📷 كاميرا رصد الهلال (الواقع المعزز)</h4>
+            <p>كاميرا الواقع المعزز لمطابقة الأفق، شبكة قياس درجات السماء، ومتابعة حية لموقع الشمس والقمر مع ميزة قفل المستشعر.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🧭 بوصلة وكاميرا القبلة الدقيقة</h4>
+            <p>تحديد دقيق لاتجاه القبلة باستخدام النماذج الجيوديسية (WGS84 و Vincenty) مع إرشاد مرئي عبر الكاميرا ومواقيت رصد القبلة بالشمس.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🕌 مواقيت الصلاة وإمساكية رمضان</h4>
+            <p>مواقيت دقيقة مع مراعاة ارتفاع الراصد عن سطح البحر وتصدير جداول جاهزة للطباعة بصيغة PDF.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>🗓️ تقويم شامل 4 في 1</h4>
+            <p>مزامنة التقويم الميلادي، الهجري، الجاوي (الأيام الخمسة)، والتقويم السوندي.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>☀️🌕 الكسوف والخسوف</h4>
+            <p>حساب أوقات التماس ونوع الكسوف ومقداره ومسار الظل بدقة عالية.</p>
+          </div>
+
+          <div class="feature-card">
+            <h4>📊 الجداول الفلكية والزيج</h4>
+            <p>جداول إحداثيات الشمس والقمر وميلها وساعاتها مع إمكانية التصدير إلى ملفات Excel (.xlsx).</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title-wrap">
+          <div class="icon-square">🏛️</div>
+          <h2>فريق التطوير والتواصل</h2>
+        </div>
+        <div class="dev-profile">
+          <div class="dev-avatar">👨‍💻</div>
+          <div class="dev-info">
+            <h3>أسيب جلال الدين بكري (Asep Jalaludin Bakrie)</h3>
+            <p class="role">المطور الرئيسي ومهندس النظام الفلكي</p>
+            <p class="contact">
+              🏛️ <strong>مؤسسة الفلكية PWNU جاوة الغربية</strong><br>
+              📍 باندونغ، جاوة الغربية، إندونيسيا<br>
+              📞 هاتف / واتساب: <strong>+62 817-2238-56</strong><br>
+              🌐 الموقع الإلكتروني: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p><strong>Lembaga Falakiyah PWNU Jawa Barat</strong></p>
+    <p>© 2026 FalakPro. Designed with utmost precision & elegance 🌙🕌☀️🧭</p>
+  </footer>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.lang-section').forEach(sec => sec.classList.remove('active'));
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(lang));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const target = document.getElementById('section-' + lang);
+      if (target) target.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

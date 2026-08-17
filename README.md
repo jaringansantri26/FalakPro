@@ -1,244 +1,133 @@
 # FalakPro
 
-FalakPro adalah aplikasi Android untuk astronomi Islam, hisab rukyat, jadwal ibadah, arah kiblat, gerhana, ephemeris, almanak, dan kalkulator falak. Aplikasi ini menggabungkan perhitungan astronomi modern berbasis teori VSOP87D, ELP/MPP02, nutasi IAU, dan algoritma Jean Meeus dengan metode hisab klasik seperti Ad-Durr al-Aniq.
+**FalakPro** adalah aplikasi Android profesional untuk astronomi Islam, hisab rukyat, kalender astronomis, jadwal ibadah, arah kiblat, gerhana, ephemeris, almanak, dan kalkulator falak. Aplikasi ini menggabungkan perhitungan astrofisika modern presisi tinggi berbasis teori **VSOP87D**, **ELP/MPP02**, nutasi **IAU 2000A/2006**, dan algoritma **Jean Meeus** dengan khazanah metode hisab klasik turats pesantren seperti **Ad-Durr al-Aniq fi Ilm al-Falak**.
 
-Proyek ini ditujukan untuk pengguna yang membutuhkan alat falak praktis sekaligus dapat diaudit: pesantren, lembaga falakiyah, guru, santri, mahasiswa, peneliti, masjid, dan pengguna umum.
+Dikembangkan di bawah naungan **Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ulama (PWNU) Jawa Barat** untuk pesantren, akademisi, lembaga hisab rukyat, kementerian agama, guru, santri, mahasiswa, peneliti, masjid, dan umat Islam luas.
 
-## Bahasa Indonesia
+---
 
-### Tujuan
+## 🇮🇩 Bahasa Indonesia
 
-FalakPro dibuat sebagai aplikasi terpadu untuk:
+### 🌟 Fitur Utama
 
-- menghitung awal bulan Hijriah;
-- menampilkan data hilal, ijtimak, elongasi, umur hilal, iluminasi, lag time, tinggi hilal, azimut, dan parameter rukyat;
-- membuat peta visibilitas hilal;
-- menghitung jadwal salat dan imsakiyah;
-- menentukan arah kiblat, kompas kiblat, kamera kiblat, dan rashdul kiblat;
-- menghitung gerhana Matahari dan Bulan;
-- menampilkan data Matahari dan Bulan realtime maupun manual;
-- menyediakan ephemeris harian dan almanak nautika;
-- menyediakan kalkulator ilmiah/falak dengan fungsi JD, Delta T, DMS/HMS, trigonometri, normalisasi sudut, dan memori.
+1. **Hisab Awal Bulan Hijriyah Terpadu**
+   - Jalur hisab ganda: **Astronomi Modern (VSOP87D + ELP/MPP02)** dan **Kitab Turats (Ad-Durr al-Aniq)**.
+   - Parameter lengkap: Ijtimak Geosentris & Toposentris, Ghurub Matahari & Bulan, Tinggi Hilal (Hakiki, Mar'i, Apparent, Airless), Elongasi, Umur Hilal, Fraksi Iluminasi, Lebar Sabit, *Bright Limb Angle* (BLA), *Lag Time* (Mukts), dan *Best Time*.
+   - Perbandingan multi-kriteria otomatis: **MABIMS Baru (3°/6,4°)**, **MABIMS Lama (2°/3°/8j)**, **Wujudul Hilal**, **Neo-MABIMS**, **Kriteria Danjon**, **Kriteria Odeh / Q Odeh**, **Kriteria Yallop**, **Kriteria LAPAN**, **Ummul Qura**, dan **Turki / KGHT**.
 
-### Fitur Utama
+2. **Peta Visibilitas Hilal Global Interaktif**
+   - Pemetaan visibilitas hilal di seluruh dunia secara real-time dan independen.
+   - Pilihan layer: **Garis Batas Zona Visibilitas** dan **Garis Ketinggian Hilal (0°, 2°, 3°, 5°, 7°)**.
+   - Kontrol dinamis: Pemilih Bulan & Tahun Hijriyah, Offset Hari (+0 H-29, +1 H-30, +2), serta 8 kriteria hisab internasional.
+   - Komputasi cepat berbasis *multi-threading* dan *disk caching* biner.
 
-- Hisab Awal Bulan Terpadu: metode VSOP87D/ELP-MPP02 dan Ad-Durr al-Aniq.
-- Kriteria hilal: MABIMS Baru/Neo-MABIMS, MABIMS Lama, Yallop, Odeh/Q Odeh, dan kriteria lain yang disediakan modul peta visibilitas.
-- Peta visibilitas hilal: klasifikasi area memenuhi/tidak memenuhi kriteria, tenggelam/belum ijtimak, dan ekspor/cetak gambar.
-- Jadwal salat: Subuh, Syuruq, Dhuha, Zuhur, Asar, Magrib, Isya, imsakiyah bulanan, koreksi lokasi/elevasi/zona waktu.
-- Kiblat: azimut kiblat, kompas, kamera AR, posisi Matahari/Bulan, dan rashdul kiblat.
-- Gerhana: prediksi global dan lokal, kontak gerhana, magnitude, obscuration, durasi, dan data lokasi.
-- Data Falak: ephemeris, almanak nautika, posisi Matahari/Bulan realtime dan manual.
-- Kalkulator Falak: fungsi trigonometri, invers, JD/MJD, Delta T, GAST/LST/HA, DMS/HMS, normalisasi 0..360 dan -180..180, faktorial, kombinasi, permutasi, FPB/KPK, dan memori.
-- Lokasi: input manual, daftar kota, dan GPS.
-- Offline-first: perhitungan yang tidak membutuhkan jaringan tetap berjalan offline. GPS/geocoding/update aplikasi tetap membutuhkan izin/perangkat/jaringan sesuai fungsi.
-- Cetak/PDF: jadwal salat, hasil hisab awal bulan, data gerhana, dan bagan posisi hilal.
-- Cek update aplikasi: update metadata dapat dibaca dari `update.json` yang disiapkan di repository rilis.
+3. **Kamera Rukyat Hilal & Matahari (Augmented Reality)**
+   - Proyeksi vektor 3D benda langit di atas layar kamera *real-time* berbasis sensor orientasi (*Rotation Vector*).
+   - **Kunci Posisi (*Lock Sensor*)**: Mengunci arah sensor perangkat saat terpasang pada tripod, sementara hisab dan ikon tetap bergerak dinamis sesuai perputaran waktu langit.
+   - **Penggaris / Grid Derajat**: Menampilkan garis panduan koordinat langit (ketinggian horizontal 0°..70° dan azimut vertikal 0°..360°).
+   - **Koreksi Manual**: Pengguna dapat menyelaraskan (*align*) posisi ikon dengan Matahari nyata via geser layar (*touch drag*) untuk mengoreksi gangguan medan magnet.
+   - Panel HUD monospaced: `Sensor Az/h`, `Delta Az/h`, `SUN Az/h`, `MOON Az/h`, dan `Magnetic Declination`.
+   - Panduan observasi 5 langkah terintegrasi dan fitur *Keep Screen On*.
 
-### Basis Perhitungan
+4. **Arah Kiblat & Kamera Kiblat AR**
+   - Perhitungan azimut kiblat berbasis rumus **Great Circle (Spherical)**, **Ellipsoid WGS84**, dan **Vincenty Geodesic Formula**.
+   - Kompas digital responsif dengan getaran dan suara *beep* saat perangkat lurus menghadap Ka'bah.
+   - Kamera AR Kiblat dengan penunjuk visual Ka'bah 3D di layar.
+   - Data harian & tahunan **Rashdul Qiblah** (Istiwa A'zham) saat bayangan Matahari mengarah tepat ke Ka'bah.
 
-FalakPro memakai beberapa jalur perhitungan:
+5. **Jadwal Salat & Imsakiyah Terpadu**
+   - Waktu salat akurat: Subuh, Syuruq, Dhuha, Zuhur, Asar (Syafi'i / Hanafi), Magrib, Isya, dan Imsak.
+   - Koreksi ketinggian tempat (elevasi/kerendahan ufuk), zona waktu, dan menit ikhtiyath kustom.
+   - Opsi kriteria hisab: **LFNU**, **Kemenag RI**, **MWL**, **ISNA**, **Ummul Qura**, **Mesir (EGAS)**, **Karachi**, dll.
+   - Ekspor dan cetak **Jadwal Salat / Imsakiyah format PDF A4** siap cetak.
 
-1. Astronomi modern
-   - Matahari: VSOP87D Earth heliocentric series untuk posisi Matahari geosentris.
-   - Bulan: ELP/MPP02 lunar theory dengan parameter DE405-compatible.
-   - Nutasi: IAU 2000A series dengan precession/obliquity flow IAU 2006.
-   - Transformasi koordinat: ekliptika-ekuatorial-horizontal, topocentric parallax, semidiameter, refraction, sidereal time.
-   - Kalender dan fase Bulan: algoritma Jean Meeus.
+6. **Kalender Astronomis 4-in-1**
+   - Integrasi dan sinkronisasi 4 sistem kalender sekaligus: **Kalender Masehi**, **Kalender Hijriyah**, **Saka Jawa (Pasaran: Legi, Pahing, Pon, Wage, Kliwon)**, dan **Caka Sunda (Pancawara, Sadwara, Wuku)**.
 
-2. Hisab klasik
-   - Ad-Durr al-Aniq: tabel harakat, mabsuthah, majmuah, bulan, serta tabel ta'dil yang dikonversi ke data biner agar ringan di Android.
-   - Hasil proses menampilkan tahapan hisab, jumlah, dalil, ta'dil, data hilal, dan kesimpulan.
+7. **Prediksi Gerhana Matahari & Bulan**
+   - Prediksi komprehensif gerhana: Total, Cincin, Sebagian, Penumbra, dan Hibrida.
+   - Waktu kontak presisi (U1, U2, Puncak/Greatest, U3, U4), magnitude, fraksi obscuration, durasi, dan data geometri bayangan lokal pengamat.
 
-3. Visibilitas hilal
-   - MABIMS Baru/Neo-MABIMS: tinggi minimal 3 derajat dan elongasi minimal 6,4 derajat.
-   - MABIMS Lama: tinggi minimal 2 derajat, elongasi minimal 3 derajat, umur minimal 8 jam.
-   - Yallop: berbasis arc of vision dan crescent width.
-   - Odeh/Q Odeh: berbasis arc of vision dan crescent width.
+8. **Data Falak & Ephemeris Lengkap**
+   - Ephemeris harian/jam-jaman Matahari & Bulan: Asensio Rekta (RA), Deklinasi, GHA, LHA, Equation of Time (EoT), Obliquity, GAST, Jarak (AU/km), dan Delta T.
+   - Ekspor spreadsheet **Excel (.xlsx)** dengan tabel terformat rapi.
 
-4. Gerhana
-   - Menggunakan elemen/pendekatan Besselian untuk kontak dan keadaan global/lokal.
-   - Koreksi Delta T digunakan untuk konversi TD/TT ke UT.
-   - Modul gerhana dirancang untuk membedakan data global dan keadaan lokal pengamat.
+9. **Kalkulator Ilmiah Falak**
+   - Kalkulator astronomis khusus dengan fungsi trigonometri derajat/rad, invers, konversi DMS (Derajat-Menit-Detik) ↔ Desimal, konversi HMS ↔ Desimal, Julian Day (JD/MJD), Delta T, GAST/LST/HA, normalisasi sudut (0..360° dan -180..+180°), faktorial, permutasi, kombinasi, FPB/KPK, dan memori falak.
 
-### Data dan Jumlah Suku Koreksi
+10. **Manajemen Lokasi & Offline-First**
+    - Input manual koordinat DMS/Desimal, pencarian dari database ribuan kota, dan penentuan posisi instan via GPS.
+    - 100% *Offline-First* — seluruh kalkulasi astronomis diproses secara lokal di perangkat tanpa memerlukan koneksi internet.
 
-Jumlah berikut adalah jumlah yang dipaketkan dan dibaca oleh aplikasi saat ini.
+---
 
-| Data | File aset | Jumlah |
-| --- | --- | ---: |
-| VSOP87D Earth L/B/R | `earth_vsop87d.bin` | 2.425 term |
-| VSOP L0..L5 | `earth_vsop87d.bin` | 559, 341, 142, 22, 11, 5 |
-| VSOP B0..B5 | `earth_vsop87d.bin` | 184, 99, 49, 11, 5, 0 |
-| VSOP R0..R5 | `earth_vsop87d.bin` | 526, 292, 139, 27, 10, 3 |
-| ELP/MPP02 longitude | `mpp02_core.bin` | 12.337, 1.199, 219, 2 term |
-| ELP/MPP02 latitude | `mpp02_core.bin` | 7.380, 516, 52 term |
-| ELP/MPP02 distance | `mpp02_core.bin` | 12.819, 1.165, 210, 2 term |
-| ELP/MPP02 total core | `mpp02_core.bin` | 35.882 term |
-| Nutasi IAU 2000A | `iau2000a_nutation.bin` | 1.365 term |
-| Harakat ijtimak Ad-Durr al-Aniq | `harokat_ijtima.bin` | 66 majmuah, 30 mabsuthah, 12 bulan |
-| Tabel ta'dil Ad-Durr al-Aniq | `ta_dil.bin` | 361 baris |
-| Data kota sumber | `data_kota/*.txt` | 50 file, 5.494 record non-kosong |
+### 🔬 Basis Algoritma dan Data Biner
 
-### Referensi Ilmiah dan Metodologi
+| Komponen Astronomi | Teori / Algoritma | File Aset Biner | Jumlah Suku Koreksi |
+| :--- | :--- | :--- | ---: |
+| **Matahari (Sun)** | VSOP87D Earth Heliocentric Series | `earth_vsop87d.bin` | 2.425 term |
+| **Bulan (Moon)** | ELP/MPP02 Lunar Theory (DE405-matched) | `mpp02_core.bin` | 35.882 term |
+| **Nutasi Bumi** | IAU 2000A Series & IAU 2006 Precession | `iau2000a_nutation.bin` | 1.365 term |
+| **Hisab Ad-Durrul Aniq** | Harakat Ijtimak & Ta'dil (KH. Ahmad Ghozali) | `harokat_ijtima.bin`, `ta_dil.bin` | 108 record, 361 baris |
+| **Database Kota** | Koordinat kota-kota dunia & Indonesia | `data_kota/*.txt` | 50 file, 5.494 record |
+| **Refraksi Atmosfer** | Formula Bennett / Meeus AA Ch.16 | Terkomputasi di runtime | Presisi tinggi |
 
-- Jean Meeus, *Astronomical Algorithms*, 2nd Edition.
-- Bretagnon & Francou, VSOP87 planetary theory.
-- Chapront-Touze & Chapront, ELP/MPP02 lunar theory.
-- IAU 2000A nutation series.
-- IAU 2006 precession and mean obliquity formulation.
-- Explanatory Supplement to the Astronomical Almanac.
-- Espenak/Meeus eclipse computation tradition and Besselian-element based eclipse practice.
-- Yallop crescent visibility criterion.
-- Odeh/Q Odeh crescent visibility criterion.
-- MABIMS criteria for Hijri calendar/imkan rukyat usage in Southeast Asia.
-- KH. Ahmad Ghozali Muhammad Fathullah, *Ad-Durr al-Aniq fi Ma'rifat al-Hilal wa al-Kusufain*.
+---
 
-### Catatan Akurasi
+### 🏛️ Tim Pengembang & Kontak
 
-FalakPro berusaha menjaga konsistensi antara:
+- **Institusi**: Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ulama (PWNU) Jawa Barat
+- **Lead Developer & System Architect**: **Asep Jalaludin Bakrie**
+- **Kontak / WhatsApp**: `+62 817-2238-56`
+- **Website Resmi**: [pwnujabar.or.id](https://pwnujabar.or.id)
 
-- nilai geosentris dan toposentris;
-- true dan apparent coordinates;
-- UT, TT/TD, JD, MJD, dan Delta T;
-- metode modern dan metode klasik;
-- hasil layar dan hasil cetak/PDF.
+---
 
-Walaupun begitu, keputusan resmi awal bulan Hijriah tetap mengikuti otoritas keagamaan dan pemerintah yang berwenang. FalakPro adalah alat bantu hisab, edukasi, dan verifikasi.
-
-### Struktur Penting Proyek
-
-- `app/src/main/java/com/falak/falakpro/premium`: mesin astronomi modern, hisab awal bulan, gerhana, visibilitas, VSOP, ELP, nutasi, dan Delta T.
-- `app/src/main/java/com/falak/falakpro/AddurulAniq`: mesin hisab Ad-Durr al-Aniq dan pembaca tabel biner.
-- `app/src/main/java/com/falak/falakpro/ui`: layar aplikasi, kalkulator, jadwal salat, kiblat, data falak, cetak/PDF, dan update checker.
-- `app/src/main/assets`: data biner yang dipakai runtime.
-- `data_kota`: sumber data lokasi dalam TXT.
-- `tools`: script pembuat/konversi data biner.
-
-### Developer
-
-FalakPro dikembangkan untuk kebutuhan falak, hisab rukyat, edukasi, dan penelitian.
-
-Lead Developer: Asep Jalaludin Bakrie
-
-## English
+## 🇬🇧 English
 
 ### Overview
 
-FalakPro is an Android application for Islamic astronomy and practical astronomical computation. It combines modern celestial mechanics, Islamic calendrical computation, prayer-time calculation, Qibla direction, eclipse prediction, crescent visibility mapping, ephemerides, nautical almanac data, and a falak-oriented scientific calculator.
+**FalakPro** is a state-of-the-art Android suite for Islamic astronomy, calendrical computation, and professional celestial observation. It uniquely synthesizes **modern computational astrophysics** (VSOP87D solar theory, ELP/MPP02 lunar ephemeris, IAU 2000A nutation, and Jean Meeus algorithms) with revered **traditional Islamic astronomical methods** (*Ad-Durr al-Aniq*).
 
-The application is designed for pesantren, Islamic astronomy institutions, teachers, students, researchers, mosques, and general users who need accurate and explainable astronomical data.
+### Key Features
 
-### Main Features
+- **Integrated Hijri Month Calculation**: High-precision VSOP87D/ELP-MPP02 and classical Ad-Durrul Aniq calculations with full parameters (Conjunction, Topocentric/Apparent Crescent Altitude, Elongation, Crescent Width, Moon Age, Illumination, Lag Time, and Best Time).
+- **Interactive Global Visibility Maps**: Independent real-time global crescent visibility mapping with contour altitude layers (0°, 2°, 3°, 5°, 7°), zone boundaries, day offsets (+0 H-29, +1 H-30, +2), and 8 criteria (MABIMS, Wujudul Hilal, Odeh, Yallop, Danjon, Turkey/KGHT).
+- **AR Crescent Observation Camera (Kamera Rukyat)**: Augmented reality celestial targeting with **Sensor Lock** for tripod stability, coordinate degree grid, manual drag alignment, and real-time Sun/Moon tracking.
+- **Precision Qibla Compass & AR Camera**: Great Circle, WGS84 Ellipsoid, and Vincenty geodesic algorithms with live camera AR alignment and daily Rashdul Qiblah times.
+- **Prayer Times & Ramadan Timetable**: Elevation-adjusted prayer schedules, international calculation conventions (LFNU, Kemenag, MWL, ISNA, Ummul Qura), and A4 PDF printing.
+- **4-in-1 Integrated Calendar**: Gregorian, Hijri, Javanese Saka (Pasaran cycles), and Sundanese Caka systems.
+- **Solar & Lunar Eclipse Predictions**: Contact timing (U1..U4), magnitude, obscuration, and local circumstance geometry.
+- **Astronomical Ephemeris & Data Falak**: Daily/hourly solar and lunar ephemeris tables with **Excel (.xlsx)** export.
+- **Scientific Falak Calculator**: Comprehensive trigonometric, DMS/HMS, Julian Day, Delta T, GAST/LST/HA, and memory functions.
+- **100% Offline-First Architecture**: All calculations run locally on-device without internet dependency.
 
-- Integrated Hijri month-start computation using modern VSOP87D/ELP-MPP02 and classical Ad-Durr al-Aniq methods.
-- Crescent visibility criteria including Neo-MABIMS, old MABIMS, Yallop, and Odeh/Q Odeh.
-- Crescent visibility map with printable/exportable graphics.
-- Prayer times and monthly imsakiyah with location, elevation, and timezone handling.
-- Qibla tools: azimuth, compass, AR camera, Sun/Moon assistance, and rashdul qiblah.
-- Solar and lunar eclipse prediction with global and local circumstances.
-- Ephemeris, nautical almanac, and Sun/Moon position data.
-- Scientific falak calculator with JD, MJD, Delta T, DMS/HMS, trigonometry, sidereal time, angle normalization, and memory functions.
-- Location input by manual entry, city list, or GPS.
-- Offline-first calculation model for computations that do not require network access.
-- PDF/print output for selected reports.
-- Update-check support through a release metadata JSON file.
+---
 
-### Computational Basis
+## 🇸🇦 العربية
 
-FalakPro uses:
+### نبذة عن التطبيق
 
-- VSOP87D Earth series for solar position.
-- ELP/MPP02 lunar theory for lunar longitude, latitude, and distance.
-- IAU 2000A nutation series with IAU 2006 style precession/obliquity handling.
-- Meeus algorithms for calendars, lunar phases, coordinate transforms, and auxiliary astronomy.
-- Topocentric parallax, semidiameter, refraction, sidereal time, and apparent/true coordinate handling.
-- Classical Ad-Durr al-Aniq tables for traditional Islamic astronomical computation.
-- Crescent visibility criteria from MABIMS, Yallop, and Odeh.
+**فلك برو (FalakPro)** هو تطبيق أندرويد رائد ومتخصص في الحسابات الفلكية الإسلامية وعلم الفلك العملي، تم تطويره بواسطة **مؤسسة الفلكية التابعة لـ PWNU جاوة الغربية، إندونيسيا**.
 
-### Packaged Computational Data
+يجمع التطبيق بين **أحدث النظريات الفلكية العالمية عالية الدقة** (مثل نظريات VSOP87D للشمس، ونظرية ELP/MPP02 للقمر، ونماذج IAU 2000A/2006 للنوتيشن) وبين **كتب الفلك الإسلامي التراثية المعتمدة** (مثل كتاب *الدر الأنيق في علم الفلك* وكتاب *سلم النيرين*).
 
-| Data | Asset | Count |
-| --- | --- | ---: |
-| VSOP87D Earth L/B/R | `earth_vsop87d.bin` | 2,425 terms |
-| ELP/MPP02 lunar core | `mpp02_core.bin` | 35,882 terms |
-| IAU 2000A nutation | `iau2000a_nutation.bin` | 1,365 terms |
-| Ad-Durr al-Aniq ijtimak harakat | `harokat_ijtima.bin` | 108 records |
-| Ad-Durr al-Aniq ta'dil table | `ta_dil.bin` | 361 rows |
-| Location source data | `data_kota/*.txt` | 50 files, 5,494 non-empty records |
+### أبرز المزايا
 
-### References
+- **حساب أوائل الشهور الهجرية**: دمج الحسابات الفلكية الحديثة مع الحسابات التراثية، مع استخراج كامل عناصر الهلال (الاقتران، الارتفاع الحقيقي والمرئي، الاستطالة، سمك الهلال، عمر القمر، وكسر الإضاءة).
+- **خريطة إمكانية رؤية الهلال التفاعلية**: خريطة عالمية فورية مع خطوط تساوي الارتفاع (0°، 2°، 3°، 5°، 7°) وتصنيف المناطق لمعايير الرؤية العالمية (MABIMS، عودة، يالوب، دانجون، تركيا/KGHT).
+- **كاميرا رصد الهلال بالواقع المعزز (AR)**: تراكب دقيق لمواقع الشمس والقمر على خط الأفق مع ميزة قفل المستشعر (*Lock Sensor*) للاستخدام مع التلسكوب والحامل الثلاثي.
+- **تحديد اتجاه القبلة بدقة**: نماذج جيوديسية متعددة (WGS84 و Vincenty) مع إرشاد بصري عبر الكاميرا ومواقيت رصد القبلة بظل الشمس.
+- **مواقيت الصلاة وإمساكية رمضان**: مواقيت دقيقة مع مراعاة ارتفاع الراصد عن سطح البحر وتصدير جداول بصيغة PDF قابلة للطباعة.
+- **تقويم شامل 4 في 1**: مزامنة التقاويم الميلادية والهجرية والجاوية والسوندية.
+- **الكسوف والخسوف والزيج الفلكي**: حساب دقيق لظواهر الكسوف والخسوف وتصدير جداول الزيج الفلكي بصيغة ملفات Excel (.xlsx).
+- **العمل دون اتصال بالإنترنت (Offline-First)**: تتم جميع العمليات الحسابية محلياً على الجهاز لضمان الخصوصية والسرعة.
 
-- Jean Meeus, *Astronomical Algorithms*.
-- Bretagnon & Francou, VSOP87 theory.
-- Chapront-Touze & Chapront, ELP/MPP02 lunar theory.
-- IAU 2000A nutation and IAU 2006 precession/obliquity conventions.
-- Explanatory Supplement to the Astronomical Almanac.
-- Espenak/Meeus eclipse calculation tradition and Besselian elements.
-- Yallop and Odeh crescent visibility criteria.
-- MABIMS crescent visibility criteria.
-- KH. Ahmad Ghozali Muhammad Fathullah, *Ad-Durr al-Aniq*.
+---
 
-### Accuracy Notice
+### ⚖️ تنبيه فقهي وأمانة علمية
 
-FalakPro is a calculation, education, and verification tool. Official Hijri calendar decisions remain the authority of the relevant religious and governmental bodies.
+تطبيق **FalakPro** هو أداة حسابية وتعليمية وبحثية دقيقة. أما القرار الرسمي لثبوت أوائل الشهور الهجرية وتحديد مناسبات الأعياد فيرجع شرعاً ونظاماً إلى الجهات الدينية والمؤسسات الرسمية المخولة في كل دولة.
 
-## العربية
-
-### نبذة
-
-فلك برو هو تطبيق أندرويد للحسابات الفلكية الإسلامية وعلم الفلك العملي. يجمع التطبيق بين الحسابات الفلكية الحديثة، وحساب أوائل الشهور الهجرية، ومواقيت الصلاة، واتجاه القبلة، والكسوف والخسوف، وخريطة رؤية الهلال، والجداول الفلكية، والحاسبة العلمية الفلكية.
-
-صمم التطبيق للمعاهد الإسلامية، والهيئات الفلكية، والمدرسين، والطلاب، والباحثين، والمساجد، وكل من يحتاج إلى بيانات فلكية واضحة وقابلة للمراجعة.
-
-### أهم الميزات
-
-- حساب بداية الشهر الهجري بطريقة حديثة VSOP87D/ELP-MPP02 وبطريقة Ad-Durr al-Aniq.
-- معايير رؤية الهلال: مابيمس الجديد، مابيمس القديم، يالوب، وعودة.
-- خريطة إمكانية رؤية الهلال مع إمكانية الطباعة أو التصدير.
-- مواقيت الصلاة والإمساكية الشهرية مع مراعاة الموقع والارتفاع والمنطقة الزمنية.
-- أدوات القبلة: سمت القبلة، البوصلة، كاميرا القبلة، ورصد اتجاه الظل.
-- حساب الكسوف والخسوف عالميا ومحليا.
-- بيانات الشمس والقمر، الجداول الفلكية، والألمانك الملاحي.
-- حاسبة فلكية تتضمن JD و MJD و Delta T و DMS و HMS والدوال المثلثية والزمن النجمي.
-- إدخال الموقع يدويا أو من قائمة المدن أو باستخدام GPS.
-- الحسابات التي لا تحتاج إلى الإنترنت تعمل دون اتصال.
-
-### أساس الحساب
-
-يعتمد التطبيق على:
-
-- نظرية VSOP87D لحساب موقع الشمس.
-- نظرية ELP/MPP02 لحساب موقع القمر والمسافة.
-- نموذج IAU 2000A للنوتيشن مع منهج IAU 2006 للسبق وميل فلك البروج.
-- خوارزميات Jean Meeus للتقاويم والتحويلات الفلكية.
-- التصحيحات الموضعية مثل اختلاف المنظر، نصف القطر الظاهري، الانكسار، والزمن النجمي.
-- جداول Ad-Durr al-Aniq للحسابات التراثية.
-- معايير مابيمس ويالوب وعودة لرؤية الهلال.
-
-### بيانات التصحيح المضمنة
-
-| البيانات | الملف | العدد |
-| --- | --- | ---: |
-| VSOP87D Earth | `earth_vsop87d.bin` | 2,425 حد |
-| ELP/MPP02 للقمر | `mpp02_core.bin` | 35,882 حد |
-| IAU 2000A Nutation | `iau2000a_nutation.bin` | 1,365 حد |
-| Harakat Ad-Durr al-Aniq | `harokat_ijtima.bin` | 108 سجل |
-| Tabel ta'dil Ad-Durr al-Aniq | `ta_dil.bin` | 361 صف |
-| بيانات المدن | `data_kota/*.txt` | 50 ملفا، 5,494 سجلا غير فارغ |
-
-### المراجع
-
-- Jean Meeus, *Astronomical Algorithms*.
-- Bretagnon & Francou, VSOP87.
-- Chapront-Touze & Chapront, ELP/MPP02.
-- IAU 2000A Nutation و IAU 2006.
-- Explanatory Supplement to the Astronomical Almanac.
-- حسابات الكسوف والخسوف بطريقة العناصر البيسلية.
-- معايير Yallop و Odeh لرؤية الهلال.
-- معايير MABIMS.
-- كتاب *Ad-Durr al-Aniq* للشيخ KH. Ahmad Ghozali Muhammad Fathullah.
-
-### تنبيه
-
-فلك برو أداة للحساب والتعليم والمراجعة. أما القرار الرسمي لبداية الشهر الهجري فيرجع إلى الجهات الدينية والرسمية المختصة.
+---
+© 2026 **FalakPro** — Lembaga Falakiyah PWNU Jawa Barat. All Rights Reserved. 🌙🕌☀️🧭🔭

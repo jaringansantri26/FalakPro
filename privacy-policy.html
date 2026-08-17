@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kebijakan Privasi – FalakPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0F6D5E;
+      --primary-dark: #084C41;
+      --primary-light: #E6F4F1;
+      --accent-gold: #D4AF37;
+      --accent-gold-light: #FDF8E7;
+      --bg-body: #F8FAFB;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --shadow-sm: 0 2px 8px rgba(15, 109, 94, 0.06);
+      --shadow-md: 0 8px 24px rgba(15, 109, 94, 0.09);
+      --shadow-lg: 0 16px 40px rgba(15, 109, 94, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    header {
+      background: radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.25), transparent 45%),
+                  linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, #15806F 100%);
+      color: #FFFFFF;
+      padding: 60px 24px 44px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: "";
+      position: absolute;
+      top: -50%; left: -20%;
+      width: 140%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+    .header-container {
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 76px; height: 76px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(212, 175, 55, 0.5);
+      backdrop-filter: blur(12px);
+      border-radius: 22px;
+      margin-bottom: 20px;
+      font-size: 38px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    header p.subtitle {
+      font-size: 1.05rem;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 400;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .meta-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 30px;
+      padding: 6px 18px;
+      font-size: 0.85rem;
+      color: #E2E8F0;
+      margin-top: 20px;
+    }
+    .meta-tag strong { color: var(--accent-gold); }
+
+    /* ── Sticky Tab Bar ── */
+    .tab-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+    .tab-container {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      padding: 6px 16px;
+      gap: 8px;
+    }
+    .tab-btn {
+      flex: 1;
+      max-width: 220px;
+      padding: 12px 18px;
+      border: none;
+      background: transparent;
+      border-radius: var(--radius-sm);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+    .tab-btn:hover {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(15, 109, 94, 0.25);
+    }
+
+    /* ── Content Layout ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+    .lang-content { display: none; }
+    .lang-content.active { display: block; animation: fadeIn 0.35s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Arabic Typography */
+    .lang-content[data-lang="ar"] {
+      direction: rtl;
+      text-align: right;
+      font-family: 'Amiri', 'Plus Jakarta Sans', serif;
+      font-size: 1.15rem;
+    }
+    .lang-content[data-lang="ar"] h2 { font-family: 'Amiri', serif; }
+
+    /* ── Typography & Cards ── */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    .section-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(15, 109, 94, 0.25);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .icon-box {
+      width: 44px; height: 44px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      letter-spacing: -0.2px;
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 18px 0 8px;
+    }
+    p { margin-bottom: 14px; color: #334155; }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 8px;
+      color: #334155;
+    }
+    .lang-content[data-lang="ar"] ul {
+      padding-left: 0;
+      padding-right: 24px;
+    }
+
+    /* Highlights & Badges */
+    .highlight-box {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 16px 20px;
+      margin: 18px 0;
+      font-size: 0.95rem;
+      color: var(--primary-dark);
+    }
+    .lang-content[data-lang="ar"] .highlight-box {
+      border-left: none;
+      border-right: 4px solid var(--primary);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    }
+    .gold-box {
+      background: var(--accent-gold-light);
+      border-left: 4px solid var(--accent-gold);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 16px 20px;
+      margin: 18px 0;
+      font-size: 0.95rem;
+      color: #714B00;
+    }
+    .lang-content[data-lang="ar"] .gold-box {
+      border-left: none;
+      border-right: 4px solid var(--accent-gold);
+      border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+    }
+
+    /* Grid for Permissions */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+    .perm-item {
+      background: #F8FAFC;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+    }
+    .perm-item h4 {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Footer */
+    footer {
+      background: #0F172A;
+      color: #94A3B8;
+      text-align: center;
+      padding: 40px 24px;
+      font-size: 0.9rem;
+      border-top: 1px solid #1E293B;
+    }
+    footer a { color: var(--accent-gold); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .org-title {
+      color: #FFFFFF;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 40px 16px 32px; }
+      header h1 { font-size: 1.7rem; }
+      .section-card { padding: 20px 18px; }
+      .tab-btn { padding: 10px 12px; font-size: 0.88rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-container">
+      <div class="logo-badge">🌙</div>
+      <h1>Kebijakan Privasi FalakPro</h1>
+      <p class="subtitle">Aplikasi Astronomi Islam, Hisab Awal Bulan, Jadwal Salat & Kamera Rukyat Profesional</p>
+      <div class="meta-tag">
+        <span>Diperbarui: <strong>Agustus 2026</strong></span> • <span>Versi: <strong>0.0.1 Beta</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Language Tabs ── -->
+  <div class="tab-wrapper">
+    <div class="tab-container">
+      <button class="tab-btn active" onclick="switchLang('id')">🇮🇩 Bahasa Indonesia</button>
+      <button class="tab-btn" onclick="switchLang('en')">🇬🇧 English</button>
+      <button class="tab-btn" onclick="switchLang('ar')">🇸🇦 العربية</button>
+    </div>
+  </div>
+
+  <main>
+    <!-- ========================================================================= -->
+    <!-- BAHASA INDONESIA -->
+    <!-- ========================================================================= -->
+    <div id="lang-id" class="lang-content active" data-lang="id">
+      
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🛡️</div>
+          <h2>Komitmen Privasi FalakPro</h2>
+        </div>
+        <p>
+          Selamat datang di <strong>FalakPro</strong>, aplikasi komputasi astronomi Islam dan hisab-rukyat yang dikembangkan oleh <strong>Lembaga Falakiyah PWNU Jawa Barat</strong>.
+        </p>
+        <p>
+          Kami memegang teguh prinsip <em>Privacy by Design</em>. FalakPro dirancang sebagai aplikasi yang mengedepankan keamanan pengguna: <strong>seluruh pemrosesan perhitungan falak, koordinat, citra kamera, dan sensor orientasi dilakukan 100% secara lokal di perangkat Anda (On-Device Processing)</strong> tanpa mengirimkan data pribadi ke server eksternal mana pun.
+        </p>
+        <div class="highlight-box">
+          ✨ <strong>Ringkasan Cepat:</strong> FalakPro tidak mengumpulkan, tidak merekam, tidak membagikan, dan tidak menjual data pribadi Anda kepada pihak ketiga.
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">📱</div>
+          <h2>Izin Perangkat yang Digunakan & Tujuannya</h2>
+        </div>
+        <p>
+          FalakPro hanya meminta izin yang secara langsung diperlukan untuk fungsionalitas hisab dan pengamatan astronomis:
+        </p>
+
+        <div class="grid-2">
+          <div class="perm-item">
+            <h4>📍 Lokasi (GPS & Jaringan)</h4>
+            <p>
+              Digunakan untuk memperoleh koordinat lintang, bujur, dan ketinggian tempat (elevasi) pengamat. Koordinat ini mutlak diperlukan untuk perhitungan toposentrik astronomis, waktu salat, arah kiblat, dan posisi hilal di lokasi pengamat. <em>Data lokasi tidak pernah dikirim ke server.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📷 Kamera (Camera)</h4>
+            <p>
+              Digunakan khusus pada fitur <strong>Kamera Kiblat (AR)</strong> dan <strong>Kamera Rukyat Hilal</strong> untuk menampilkan pratinjau langsung <em>(live preview)</em> arah ufuk nyata dan menyandingkan posisi matahari/bulan hisab secara augmented reality. <em>Aplikasi tidak merekam atau mengunggah citra kamera.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>🧭 Sensor Gerak & Kompas</h4>
+            <p>
+              Menggunakan sensor akselerometer, giroskop, dan vektor rotasi <em>(Rotation Vector)</em> untuk menentukan orientasi perangkat secara 3D saat membidik arah kiblat atau memantau posisi benda langit secara real-time.
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📁 Penyimpanan & Berkas (Storage)</h4>
+            <p>
+              Digunakan hanya saat Anda secara sukarela memilih untuk <strong>Mengekspor Jadwal Salat (PDF)</strong> atau <strong>Mengekspor Laporan Data Falak (Excel .xlsx)</strong> ke memori perangkat Anda.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🔒</div>
+          <h2>Keamanan Data & Penyimpanan Lokal</h2>
+        </div>
+        <p>
+          Semua pengaturan preferensi (seperti kriteria awal bulan yang dipilih, ikhtiyath jadwal salat, pilihan tema, dan markaz manual) disimpan secara aman di penyimpanan internal perangkat Anda menggunakan <code>SharedPreferences</code> lokal.
+        </p>
+        <p>
+          Jika Anda menghapus aplikasi dari perangkat Anda, seluruh data preferensi lokal tersebut akan terhapus secara otomatis dan bersih dari perangkat.
+        </p>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🌐</div>
+          <h2>Koneksi Internet & Layanan Pihak Ketiga</h2>
+        </div>
+        <p>
+          Aplikasi FalakPro dapat berfungsi secara penuh secara <strong>offline</strong> (tanpa koneksi internet).
+        </p>
+        <p>
+          Akses internet hanya digunakan untuk keperluan opsional:
+        </p>
+        <ul>
+          <li>Pemeriksaan pembaruan versi aplikasi <em>(In-App Update via Google Play Store / Update Checker)</em>.</li>
+          <li>Sinkronisasi waktu GPS dan pencarian nama kota (apabila pengguna memilih mode otomatis).</li>
+        </ul>
+        <div class="gold-box">
+          🚫 <strong>Bebas Iklan & Pelacak:</strong> FalakPro tidak memuat SDK pelacak analitik invasif, tidak mengumpulkan ID iklan (AAID), dan tidak memuat iklan pihak ketiga.
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🏛️</div>
+          <h2>Kontak Pengembang</h2>
+        </div>
+        <p>
+          Kebijakan privasi ini dikelola secara resmi oleh:
+        </p>
+        <p>
+          <strong>Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ulama (PWNU) Jawa Barat</strong><br>
+          <em>Programmer & Arsitek Sistem:</em> Asep Jalaludin Bakrie<br>
+          📍 Bandung, Jawa Barat, Indonesia<br>
+          📞 Kontak: <strong>+62 817-2238-56</strong><br>
+          🌐 Website: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ENGLISH -->
+    <!-- ========================================================================= -->
+    <div id="lang-en" class="lang-content" data-lang="en">
+      
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🛡️</div>
+          <h2>FalakPro Privacy Commitment</h2>
+        </div>
+        <p>
+          Welcome to <strong>FalakPro</strong>, a professional Islamic astronomy, prayer schedule, and crescent sighting computation application developed by <strong>Lembaga Falakiyah PWNU Jawa Barat</strong>.
+        </p>
+        <p>
+          We strictly adhere to <em>Privacy by Design</em> principles. FalakPro is architected to prioritize user security: <strong>all astronomical algorithms, coordinates, camera feeds, and orientation sensor calculations are processed 100% locally on your device (On-Device Processing)</strong> without transmitting your personal information to any external server.
+        </p>
+        <div class="highlight-box">
+          ✨ <strong>Quick Summary:</strong> FalakPro does not collect, record, share, or sell your personal data to third parties.
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">📱</div>
+          <h2>Device Permissions & Usage Purpose</h2>
+        </div>
+        <p>
+          FalakPro requests only permissions that are strictly necessary for astronomical computations and celestial observation:
+        </p>
+
+        <div class="grid-2">
+          <div class="perm-item">
+            <h4>📍 Location (GPS & Network)</h4>
+            <p>
+              Required to obtain observer latitude, longitude, and elevation. Accurate local coordinates are essential for topocentric astronomical algorithms, prayer times, Qibla azimuth, and crescent visibility. <em>Location coordinates are never uploaded to servers.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📷 Camera</h4>
+            <p>
+              Utilized strictly in <strong>AR Qibla Camera</strong> and <strong>AR Crescent Observation (Rukyat Camera)</strong> modes to overlay calculated celestial positions on the live horizon. <em>The app does not record, capture, or transmit camera frames.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>🧭 Motion Sensors & Compass</h4>
+            <p>
+              Reads accelerometer, magnetometer, and 3D Rotation Vector sensors to calculate device orientation in real-time when aligning with the Qibla or tracking Sun and Moon positions.
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📁 File Storage</h4>
+            <p>
+              Used only when you explicitly export <strong>Prayer Timetables (PDF)</strong> or <strong>Astronomical Ephemeris Data (Excel .xlsx)</strong> directly into your device storage.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🔒</div>
+          <h2>Data Security & Local Storage</h2>
+        </div>
+        <p>
+          All user preferences (such as selected Hijri criteria, prayer time adjustments, app theme, and manual locations) are stored securely on your device via local <code>SharedPreferences</code>.
+        </p>
+        <p>
+          Uninstalling the application will completely and cleanly remove all local configuration data from your device.
+        </p>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🌐</div>
+          <h2>Internet Access & Third Parties</h2>
+        </div>
+        <p>
+          FalakPro operates completely <strong>offline</strong>. Internet connectivity is only used for non-invasive optional features:
+        </p>
+        <ul>
+          <li>Checking for official app updates via Google Play Store / In-App Updater.</li>
+          <li>Optional GPS reverse geocoding to resolve city names when requested.</li>
+        </ul>
+        <div class="gold-box">
+          🚫 <strong>No Ads & No Trackers:</strong> FalakPro contains zero third-party advertising networks, zero tracking SDKs, and does not collect advertising IDs (AAID).
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🏛️</div>
+          <h2>Developer Contact</h2>
+        </div>
+        <p>
+          This privacy policy is officially maintained by:
+        </p>
+        <p>
+          <strong>Lembaga Falakiyah PWNU Jawa Barat</strong><br>
+          <em>Lead Developer & System Architect:</em> Asep Jalaludin Bakrie<br>
+          📍 Bandung, West Java, Indonesia<br>
+          📞 Phone / WhatsApp: <strong>+62 817-2238-56</strong><br>
+          🌐 Website: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+        </p>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- ARABIC (العربية) -->
+    <!-- ========================================================================= -->
+    <div id="lang-ar" class="lang-content" data-lang="ar">
+      
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🛡️</div>
+          <h2>التزام الخصوصية لتطبيق فلك برو (FalakPro)</h2>
+        </div>
+        <p>
+          مرحباً بكم في <strong>فلك برو (FalakPro)</strong>، التطبيق المتخصص في الحسابات الفلكية الإسلامية ومواقيت الصلاة ورؤية الهلال، والمطور من قبل <strong>مؤسسة الفلكية التابعة لـ PWNU جاوة الغربية</strong>.
+        </p>
+        <p>
+          نلتزم بأعلى معايير الخصوصية والأمان: <strong>جميع العمليات الحسابية الفلكية، الإحداثيات الجغرافية، بث الكاميرا، وبيانات المستشعرات تتم معالجتها بنسبة 100% محلياً على جهازك دون إرسال أي بيانات شخصية إلى خوادم خارجية</strong>.
+        </p>
+        <div class="highlight-box">
+          ✨ <strong>ملخص سريع:</strong> تطبيق فلك برو لا يقوم بجمع أو تسجيل أو مشاركة أو بيع بياناتك الشخصية لأي طرف ثالث.
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">📱</div>
+          <h2>الأذونات المطلوبة والغرض منها</h2>
+        </div>
+        <p>
+          يطلب التطبيق فقط الأذونات الضرورية جداً لأداء الحسابات الفلكية ورصد الأجرام السماوية:
+        </p>
+
+        <div class="grid-2">
+          <div class="perm-item">
+            <h4>📍 الموقع الجغرافي (GPS)</h4>
+            <p>
+              يُستخدم لتحديد خط العرض، خط الطول، والارتفاع عن سطح البحر. هذه الإحداثيات ضرورية لحساب مواقيت الصلاة بدقة، اتجاه القبلة، وموقع الشمس والقمر بالنسبة للراصد. <em>لا يتم رفع بيانات الموقع إلى أي خادم.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📷 الكاميرا</h4>
+            <p>
+              تُستخدم في ميزة <strong>كاميرا القبلة (الواقع المعزز)</strong> و<strong>كاميرا رصد الهلال</strong> لمطابقة خط الأفق الحقيقي وتراكب مواقع الشمس والهلال الحسابية. <em>التطبيق لا يقوم بتسجيل أو حفظ الصور.</em>
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>🧭 البوصلة ومستشعرات الحركة</h4>
+            <p>
+              لقراءة مستشعرات التوجيه الثلاثي الأبعاد لتحديد اتجاه القبلة بدقة ومتابعة حركة الأجرام السماوية لحظياً.
+            </p>
+          </div>
+
+          <div class="perm-item">
+            <h4>📁 التخزين والملفات</h4>
+            <p>
+              يُستخدم فقط عندما تختار بنفسك تصدير <strong>جداول مواقيت الصلاة (PDF)</strong> أو <strong>بيانات الزيج الفلكي (Excel .xlsx)</strong> إلى ذاكرة جهازك.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🔒</div>
+          <h2>أمان البيانات والتخزين المحلي</h2>
+        </div>
+        <p>
+          يتم تخزين جميع تفضيلاتك (مثل معايير بداية الشهر، احتياط مواقيت الصلاة، والموقع اليدوي) بشكل آمن ومحلي على جهازك فقط. حذف التطبيق يؤدي إلى حذف جميع هذه الإعدادات تلقائياً.
+        </p>
+      </div>
+
+      <div class="section-card">
+        <div class="card-header">
+          <div class="icon-box">🏛️</div>
+          <h2>معلومات التواصل مع المطور</h2>
+        </div>
+        <p>
+          تتم إدارة سياسة الخصوصية رسمياً من قِبل:
+        </p>
+        <p>
+          <strong>مؤسسة الفلكية التابعة لـ PWNU جاوة الغربية</strong><br>
+          <em>المطور الرئيسي ومهندس النظام:</em> أسيب جلال الدين بكري (Asep Jalaludin Bakrie)<br>
+          📍 باندونغ، جاوة الغربية، إندونيسيا<br>
+          📞 هاتف / واتساب: <strong>+62 817-2238-56</strong><br>
+          🌐 الموقع الإلكتروني: <a href="https://pwnujabar.or.id" target="_blank">pwnujabar.or.id</a>
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="org-title">Lembaga Falakiyah PWNU Jawa Barat</div>
+    <p>© 2026 FalakPro. All Rights Reserved. Designed with precision & elegance 🌙🕌☀️</p>
+  </footer>
+
+  <script>
+    function switchLang(lang) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.lang-content').forEach(c => c.classList.remove('active'));
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(lang));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const target = document.getElementById('lang-' + lang);
+      if (target) target.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>

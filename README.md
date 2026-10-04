@@ -4,6 +4,16 @@
 
 Dikembangkan di bawah naungan **Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ulama (PWNU) Jawa Barat** untuk pesantren, akademisi, lembaga hisab rukyat, kementerian agama, guru, santri, mahasiswa, peneliti, masjid, dan umat Islam luas.
 
+[![Google Play](https://img.shields.io/badge/Google_Play-Unduh_FalakPro-0F6D5E?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.falak.falakpro&pcampaignid=web_share)
+[![Privacy Policy](https://img.shields.io/badge/Kebijakan_Privasi-Lihat_Online-D4AF37?style=for-the-badge&logo=googledocs&logoColor=white)](https://jaringansantri26.github.io/FalakPro/privacy-policy.html)
+[![Website](https://img.shields.io/badge/Website-PWNU_Jabar-15806F?style=for-the-badge&logo=safari&logoColor=white)](https://pwnujabar.or.id)
+
+---
+
+### 📲 Unduh Aplikasi Resmi FalakPro di Google Play
+Aplikasi Android resmi **FalakPro** kini telah tersedia di Google Play Store:
+👉 **[Download FalakPro di Google Play Store](https://play.google.com/store/apps/details?id=com.falak.falakpro&pcampaignid=web_share)**
+
 ---
 
 ## 🇮🇩 Bahasa Indonesia
@@ -80,6 +90,8 @@ Dikembangkan di bawah naungan **Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ula
 - **Lead Developer & System Architect**: **Asep Jalaludin Bakrie**
 - **Kontak / WhatsApp**: `+62 817-2238-56`
 - **Website Resmi**: [pwnujabar.or.id](https://pwnujabar.or.id)
+- **Google Play Store**: [Unduh FalakPro](https://play.google.com/store/apps/details?id=com.falak.falakpro&pcampaignid=web_share)
+- **Kebijakan Privasi (Privacy Policy)**: [Buka Dokumen Privasi](https://jaringansantri26.github.io/FalakPro/privacy-policy.html)
 
 ---
 
@@ -88,6 +100,10 @@ Dikembangkan di bawah naungan **Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ula
 ### Overview
 
 **FalakPro** is a state-of-the-art Android suite for Islamic astronomy, calendrical computation, and professional celestial observation. It uniquely synthesizes **modern computational astrophysics** (VSOP87D solar theory, ELP/MPP02 lunar ephemeris, IAU 2000A nutation, and Jean Meeus algorithms) with revered **traditional Islamic astronomical methods** (*Ad-Durr al-Aniq*).
+
+### 📲 Download on Google Play Store
+Official Android release available on Google Play:  
+👉 **[Get FalakPro on Google Play Store](https://play.google.com/store/apps/details?id=com.falak.falakpro&pcampaignid=web_share)**
 
 ### Key Features
 
@@ -111,6 +127,10 @@ Dikembangkan di bawah naungan **Lembaga Falakiyah Pengurus Wilayah Nahdlatul Ula
 **فلك برو (FalakPro)** هو تطبيق أندرويد رائد ومتخصص في الحسابات الفلكية الإسلامية وعلم الفلك العملي، تم تطويره بواسطة **مؤسسة الفلكية التابعة لـ PWNU جاوة الغربية، إندونيسيا**.
 
 يجمع التطبيق بين **أحدث النظريات الفلكية العالمية عالية الدقة** (مثل نظريات VSOP87D للشمس، ونظرية ELP/MPP02 للقمر، ونماذج IAU 2000A/2006 للنوتيشن) وبين **كتب الفلك الإسلامي التراثية المعتمدة** (مثل كتاب *الدر الأنيق في علم الفلك* وكتاب *سلم النيرين*).
+
+### 📲 التحميل من متجر Google Play
+التطبيق الرسمي متوفر الآن على متجر جوجل بلاي:  
+👉 **[تحميل تطبيق FalakPro من Google Play](https://play.google.com/store/apps/details?id=com.falak.falakpro&pcampaignid=web_share)**
 
 ### أبرز المزايا
 
